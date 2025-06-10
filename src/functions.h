@@ -10,6 +10,31 @@
 #include "hardware/adc.h"
 #include "RF24.h"
 
+//Modes
+enum Mode
+{
+  IDLE,
+
+  HF_SPECTRUM,
+  HF_ACTIVITY, 
+  HF_BARRIER_SCAN,
+  HF_BARRIER_REPLAY,
+  HF_BARRIER_BRUTE_CAME,
+  HF_BARRIER_BRUTE_NICE,
+  HF_SCAN,
+  HF_REPLAY,
+  HF_JAMMER,
+  HF_TESLA,
+
+  UHF_SPECTRUM,
+  UHF_ALL_JAMMER,
+  UHF_WIFI_JAMMER,
+  UHF_BT_JAMMER,
+  UHF_BLE_JAMMER,
+};
+
+Mode currentMode = IDLE;
+
 /* ================= Battery ================== */
 #define BATTERY_COEFFICIENT 0.9611905
 #define R1 200000 // 200k
