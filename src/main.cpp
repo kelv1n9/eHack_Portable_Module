@@ -1,18 +1,37 @@
-#include <Arduino.h>
+#include "functions.h"
 
-// put function declarations here:
-int myFunction(int, int);
+DataTransmission communication(&radio_RF24, &ELECHOUSE_cc1101);
 
-void setup() {
-  // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+void setup()
+{
+  SPI.setSCK(6);
+  SPI.setMOSI(7);
+  SPI.setMISO(4);
+  SPI.begin();
+
+  analogReadResolution(12);
+  batVoltage = readBatteryVoltage();
+  EEPROM.begin(512);
+
+  radio_RF24.powerDown();
+  cc1101Init();
+
+  communication.setRadioNRF24();
+  communication.setSlaveMode();
 }
 
-void loop() {
-  // put your main code here, to run repeatedly:
+void setup1()
+{
 }
 
-// put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
+void loop()
+{
+  if (communication.checkConnection(1000))
+  {
+    Serial.println("Connection established");
+  }
+}
+
+void loop1()
+{
 }
