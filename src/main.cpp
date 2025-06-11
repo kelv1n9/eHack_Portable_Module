@@ -1,7 +1,5 @@
 #include "functions.h"
 
-DataTransmission communication(&radio_RF24, &ELECHOUSE_cc1101);
-
 void setup()
 {
   Serial.begin(115200);
@@ -23,6 +21,9 @@ void setup()
   else
   {
     Serial.println("RF24 initialization failed");
+    while (1)
+    {
+    }
   }
   radio_RF24.powerDown();
 
@@ -34,6 +35,9 @@ void setup()
   else
   {
     Serial.println("CC1101 initialization failed");
+    while (1)
+    {
+    }
   }
 
   communication.setRadioNRF24();
@@ -47,13 +51,307 @@ void setup1()
 // Loop for common tasks
 void loop()
 {
+  static uint32_t now = millis();
+
+  switch (currentMode)
+  {
+  case IDLE:
+  {
+    if (!initializedIdle)
+    {
+      Serial.println("Initializing Idle mode...");
+      communication.setRadioNRF24();
+      communication.setSlaveMode();
+      initializedIdle = true;
+    }
+
+    ELECHOUSE_cc1101.goSleep();
+    break;
+  }
+  case HF_SPECTRUM:
+  {
+    if (!initialized)
+    {
+      Serial.println("Initializing HF Spectrum mode...");
+      cc1101ReadyMode();
+      initialized = true;
+    }
+
+    break;
+  }
+  case HF_ACTIVITY:
+  {
+    if (!initialized)
+    {
+      Serial.println("Initializing HF Activity mode...");
+      cc1101ReadyMode();
+      initialized = true;
+    }
+
+    break;
+  }
+  case HF_BARRIER_SCAN:
+  {
+    if (!initialized)
+    {
+      Serial.println("Initializing HF Barrier Scan mode...");
+      cc1101ReadyMode();
+      initialized = true;
+    }
+
+    break;
+  }
+  case HF_BARRIER_REPLAY:
+  {
+    if (!initialized)
+    {
+      Serial.println("Initializing HF Barrier Replay mode...");
+      cc1101ReadyMode();
+      initialized = true;
+    }
+
+    break;
+  }
+  case HF_BARRIER_BRUTE_CAME:
+  {
+    if (!initialized)
+    {
+      Serial.println("Initializing HF Barrier Brute CAME mode...");
+      cc1101ReadyMode();
+      pinMode(GD0_PIN_CC, OUTPUT);
+      mySwitch.disableReceive();
+      mySwitch.disableTransmit();
+      ELECHOUSE_cc1101.SetTx(raFrequencies[1]);
+      initialized = true;
+    }
+
+    static int16_t barrierBruteIndex = 4095;
+    static uint32_t lastSendTime = now;
+
+    if (now - lastSendTime > 50)
+    {
+      lastSendTime = now;
+
+      if (barrierBruteIndex >= 0)
+      {
+        sendCame(barrierBruteIndex);
+        barrierBruteIndex--;
+      }
+      if (barrierBruteIndex < 0)
+      {
+        barrierBruteIndex = 4095;
+        currentMode = IDLE;
+      }
+    }
+
+    break;
+  }
+  case HF_BARRIER_BRUTE_NICE:
+  {
+    if (!initialized)
+    {
+      Serial.println("Initializing HF Barrier Brute NICE mode...");
+      cc1101ReadyMode();
+      pinMode(GD0_PIN_CC, OUTPUT);
+      mySwitch.disableReceive();
+      mySwitch.disableTransmit();
+      ELECHOUSE_cc1101.SetTx(raFrequencies[1]);
+      initialized = true;
+    }
+
+    static int16_t barrierBruteIndex = 4095;
+    static uint32_t lastSendTime = now;
+
+    if (now - lastSendTime > 50)
+    {
+      lastSendTime = now;
+
+      if (barrierBruteIndex >= 0)
+      {
+        sendNice(barrierBruteIndex);
+        barrierBruteIndex--;
+      }
+      if (barrierBruteIndex < 0)
+      {
+        barrierBruteIndex = 4095;
+        currentMode = IDLE;
+      }
+    }
+
+    break;
+  }
+  case HF_SCAN:
+  {
+    if (!initialized)
+    {
+      Serial.println("Initializing HF Scan mode...");
+      cc1101ReadyMode();
+      initialized = true;
+    }
+
+    break;
+  }
+  case HF_REPLAY:
+  {
+    if (!initialized)
+    {
+      Serial.println("Initializing HF Replay mode...");
+      cc1101ReadyMode();
+      initialized = true;
+    }
+
+    break;
+  }
+  case HF_JAMMER:
+  {
+    if (!initialized)
+    {
+      Serial.println("Initializing HF Jammer mode...");
+      cc1101ReadyMode();
+      pinMode(GD0_PIN_CC, OUTPUT);
+      mySwitch.disableReceive();
+      mySwitch.disableTransmit();
+      ELECHOUSE_cc1101.SetTx(raFrequencies[1]);
+      initialized = true;
+    }
+
+    static uint32_t lastNoise = 0;
+    static bool noiseState = false;
+    uint32_t nowMicros = micros();
+
+    // changeFreqButtons("TX");
+
+    if (nowMicros - lastNoise > 500)
+    {
+      noiseState = !noiseState;
+      digitalWrite(GD0_PIN_CC, noiseState);
+      lastNoise = nowMicros;
+    }
+
+    break;
+  }
+  case HF_TESLA:
+  {
+    if (!initialized)
+    {
+      Serial.println("Initializing HF Tesla mode...");
+      cc1101ReadyMode();
+      pinMode(GD0_PIN_CC, OUTPUT);
+      mySwitch.disableReceive();
+      mySwitch.disableTransmit();
+      ELECHOUSE_cc1101.SetTx(raFrequencies[1]);
+      initialized = true;
+    }
+
+    static bool toggleFreq = false;
+    float freq = toggleFreq ? 315.0 : 433.92;
+    ELECHOUSE_cc1101.SetTx(freq);
+    toggleFreq = !toggleFreq;
+
+    sendTeslaSignal_v1();
+    delay(50);
+    sendTeslaSignal_v2();
+    delay(50);
+
+    break;
+  }
+
+  // Handle UHF modes
+  case UHF_SPECTRUM:
+  {
+    break;
+  }
+  case UHF_ALL_JAMMER:
+  {
+    if (!initialized)
+    {
+      Serial.println("Initializing UHF All Jammer mode...");
+      initRadioAttack();
+      initialized = true;
+    }
+    radioChannel = random(0, 125);
+    radio_RF24.setChannel(radioChannel);
+    break;
+  }
+  case UHF_WIFI_JAMMER:
+  {
+    if (!initialized)
+    {
+      Serial.println("Initializing UHF WiFi Jammer mode...");
+      initRadioAttack();
+      initialized = true;
+    }
+    radioChannel = random(1, 15);
+    radio_RF24.setChannel(radioChannel);
+    break;
+  }
+  case UHF_BT_JAMMER:
+  {
+    if (!initialized)
+    {
+      Serial.println("Initializing UHF Bluetooth Jammer mode...");
+      initRadioAttack();
+      initialized = true;
+    }
+    int randomIndex = random(0, sizeof(bluetooth_channels) / sizeof(bluetooth_channels[0]));
+    radioChannel = bluetooth_channels[randomIndex];
+    radio_RF24.setChannel(radioChannel);
+    break;
+  }
+  case UHF_BLE_JAMMER:
+  {
+    if (!initialized)
+    {
+      Serial.println("Initializing UHF BLE Jammer mode...");
+      initRadioAttack();
+      initialized = true;
+    }
+    int randomIndex = random(0, sizeof(ble_channels) / sizeof(ble_channels[0]));
+    radioChannel = ble_channels[randomIndex];
+    radio_RF24.setChannel(radioChannel);
+    break;
+  }
+  }
 }
 
 // Loop for communication tasks
 void loop1()
 {
-  if (communication.checkConnection(1000))
+  uint8_t data[32];
+  uint8_t len = 0;
+
+  if (!succsessfulConnection)
   {
-    Serial.println("Connection established");
+    if (communication.checkConnection(1000))
+    {
+      Serial.println("Connection established");
+      succsessfulConnection = true;
+    }
+    else
+    {
+      Serial.println("Connection failed");
+    }
   }
+
+  if (succsessfulConnection && communication.getCurrentMode() == Slave && communication.receivePacket(data, &len))
+  {
+    currentMode = getModeFromPacket(data, len);
+    Serial.printf("Received packet with mode: %d, length: %d\n", currentMode, len);
+    switch (currentMode)
+    {
+    case UHF_SPECTRUM:
+    case UHF_ALL_JAMMER:
+    case UHF_WIFI_JAMMER:
+    case UHF_BT_JAMMER:
+    case UHF_BLE_JAMMER:
+      communication.setRadioCC1101();
+      break;
+
+    default:
+      communication.setRadioNRF24();
+      break;
+    }
+  }
+
+  Serial.printf("Current mode: %d\n", currentMode);
 }
