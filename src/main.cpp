@@ -4,6 +4,9 @@ DataTransmission communication(&radio_RF24, &ELECHOUSE_cc1101);
 
 void setup()
 {
+  Serial.begin(115200);
+  Serial.printf("Starting %s %s\n", APP_NAME, APP_VERSION); 
+
   SPI.setSCK(6);
   SPI.setMOSI(7);
   SPI.setMISO(4);

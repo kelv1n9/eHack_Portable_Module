@@ -10,6 +10,9 @@
 #include "hardware/adc.h"
 #include "RF24.h"
 
+#define APP_NAME "eHack Portable"
+#define APP_VERSION "v0.0.1"
+
 //Modes
 enum Mode
 {
