@@ -37,7 +37,7 @@ RadioMode DataTransmission::getCurrentMode()
     return currentMode;
 }
 
-void DataTransmission::_initRadio()
+void DataTransmission::init()
 {
     if (currentRadio == RADIO_CC1101)
     {
@@ -62,29 +62,23 @@ void DataTransmission::_initRadio()
     }
     else if (currentRadio == RADIO_NRF24)
     {
+        radioNRF24->powerUp();
+        radioNRF24->stopListening();
+        radioNRF24->enableDynamicPayloads();
+        radioNRF24->setPayloadSize(32);
+        radioNRF24->setDataRate(RF24_2MBPS);
+        radioNRF24->setCRCLength(RF24_CRC_16);
+        radioNRF24->setChannel(125);
         if (currentMode == Master)
         {
-            radioNRF24->powerUp();
-            radioNRF24->stopListening();
-            radioNRF24->setDataRate(RF24_2MBPS);
-            radioNRF24->setPayloadSize(32);
-            radioNRF24->setCRCLength(RF24_CRC_16);
             radioNRF24->openWritingPipe(0x000000000001);
-            radioNRF24->setChannel(125);
-            DBG("NRF24 radio initialized in Master mode");
         }
         else if (currentMode == Slave)
         {
-            radioNRF24->powerUp();
-            radioNRF24->stopListening();
-            radioNRF24->setDataRate(RF24_2MBPS);
-            radioNRF24->setPayloadSize(32);
-            radioNRF24->setCRCLength(RF24_CRC_16);
             radioNRF24->openReadingPipe(0, 0x000000000001);
-            radioNRF24->setChannel(125);
             radioNRF24->startListening();
-            DBG("NRF24 radio initialized in Slave mode");
         }
+        DBG("NRF24 radio initialized");
     }
 }
 
@@ -114,7 +108,6 @@ uint8_t DataTransmission::buildPacket(uint8_t mode, const uint8_t *payload, uint
 
 bool DataTransmission::sendPacket(uint8_t *data, uint8_t len)
 {
-    _initRadio();
 #ifdef DEBUG
     for (uint8_t i = 0; i < len; i++)
     {
@@ -137,7 +130,6 @@ bool DataTransmission::sendPacket(uint8_t *data, uint8_t len)
 
 bool DataTransmission::receivePacket(uint8_t *data, uint8_t *len)
 {
-    _initRadio();
     if (currentRadio == RADIO_CC1101 && radioCC1101->CheckReceiveFlag())
     {
         *len = radioCC1101->ReceiveData(data);
@@ -152,15 +144,15 @@ bool DataTransmission::receivePacket(uint8_t *data, uint8_t *len)
     }
     else if (currentRadio == RADIO_NRF24 && radioNRF24->available())
     {
-        radioNRF24->read(data, 32);
+        *len = radioNRF24->getDynamicPayloadSize();
+        radioNRF24->read(data, *len);
 #ifdef DEBUG
         DBG("Packet received via NRF24, length: %d", *len);
-        for (uint8_t i = 0; i < 32; i++)
+        for (uint8_t i = 0; i < *len; i++)
         {
             DBG("Received byte %d: %02X", i, data[i]);
         }
 #endif
-        *len = 32;
         return true;
     }
     return false;

@@ -42,6 +42,7 @@ void setup()
 
   communication.setRadioNRF24();
   communication.setSlaveMode();
+  communication.init();
 
   Serial.printf("Current mode: %d\n", currentMode);
 }
@@ -176,7 +177,6 @@ void loop()
 
       attackIsActive = true;
     }
-
 
     if (attackIsActive && now - attackTimer >= 1000)
     {
@@ -471,6 +471,8 @@ void loop()
 // Loop for communication tasks
 void loop1()
 {
+  static uint32_t now = millis();
+
   if (!succsessfulConnection)
   {
     if (communication.checkConnection(1000))
@@ -500,11 +502,26 @@ void loop1()
     case UHF_BT_JAMMER:
     case UHF_BLE_JAMMER:
       communication.setRadioCC1101();
+      communication.setSlaveMode();
+      communication.init();
       break;
 
     default:
       communication.setRadioNRF24();
+      communication.setSlaveMode();
+      communication.init();
       break;
     }
+  }
+
+  if (now - batteryTimer >= BATTERY_CHECK_INTERVAL)
+  {
+    uint8_t batteryVoltagePacket[3];
+
+    batteryTimer = millis();
+    batVoltage = readBatteryVoltage();
+    Serial.printf("Battery voltage: %.2fV\n", batVoltage);
+    communication.buildPacket(COMMAND_BATTERY_VOLTAGE, (uint8_t *)&batVoltage, 1, batteryVoltagePacket);
+    communication.sendPacket(batteryVoltagePacket, 3);
   }
 }

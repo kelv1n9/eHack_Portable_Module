@@ -48,7 +48,7 @@ bool initializedIdle = false;
 #define BATTERY_RESISTANCE_COEFFICIENT (1 + R1 / R2)
 #define V_REF 3.3
 
-#define BATTERY_CHECK_INTERVAL 10000
+#define BATTERY_CHECK_INTERVAL 20000
 #define BATTERY_READ_ITERATIONS 10
 
 float batVoltage;
@@ -115,8 +115,6 @@ volatile byte niceCounter = 0;  // сохраненое количество б�
 volatile uint32_t niceCode = 0; // код Nice
 volatile bool niceCaptured = false;
 
-/*=================== EEPROM ==========================*/
-#define MAX_RA_SIGNALS 10
 // ================= 2.4 GHZ ===========================/
 #define CE_PIN_NRF 21
 #define CSN_PIN_NRF 20
