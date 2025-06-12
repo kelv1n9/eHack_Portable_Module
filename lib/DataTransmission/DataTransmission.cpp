@@ -164,6 +164,9 @@ bool DataTransmission::checkConnection(uint16_t timeoutMs)
     uint8_t len = 0;
     uint32_t t0 = millis();
 
+    bool ledState = false;
+    uint32_t blinkT0 = millis();
+
     if (currentMode == Master)
     {
         static const uint8_t ping[4] = {'P', 'I', 'N', 'G'};
@@ -171,27 +174,47 @@ bool DataTransmission::checkConnection(uint16_t timeoutMs)
         sendPacket((uint8_t *)ping, 4);
         while (millis() - t0 < timeoutMs)
         {
+            if (millis() - blinkT0 >= 250)
+            {
+                blinkT0 = millis();
+                ledState = !ledState;
+                digitalWrite(LED_BUILTIN, ledState);
+            }
+
             DBG("Waiting for PING response...");
             if (receivePacket(buf, &len) && len == 4 && buf[0] == 'P' &&
                 buf[1] == 'O' && buf[2] == 'N' && buf[3] == 'G')
             {
                 DBG("Received PONG response");
+                digitalWrite(LED_BUILTIN, LOW);
                 return true;
             }
         }
+        digitalWrite(LED_BUILTIN, LOW);
         return false;
     }
-
     if (currentMode == Slave)
     {
-        if (receivePacket(buf, &len) && len == 4 && buf[0] == 'P' &&
-            buf[1] == 'I' && buf[2] == 'N' && buf[3] == 'G')
+        while (millis() - t0 < timeoutMs)
         {
-            DBG("Received PING request, sending PONG response");
-            static const uint8_t pong[4] = {'P', 'O', 'N', 'G'};
-            sendPacket((uint8_t *)pong, 4);
-            return true;
+            if (millis() - blinkT0 >= 250)
+            {
+                blinkT0 = millis();
+                ledState = !ledState;
+                digitalWrite(LED_BUILTIN, ledState);
+            }
+
+            if (receivePacket(buf, &len) && len == 4 &&
+                buf[0] == 'P' && buf[1] == 'I' && buf[2] == 'N' && buf[3] == 'G')
+            {
+                DBG("Received PING request, sending PONG response");
+                static const uint8_t pong[4] = {'P', 'O', 'N', 'G'};
+                sendPacket((uint8_t *)pong, 4);
+                digitalWrite(LED_BUILTIN, LOW); 
+                return true;
+            }
         }
     }
+    digitalWrite(LED_BUILTIN, LOW);
     return false;
 }

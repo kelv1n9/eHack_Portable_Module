@@ -5,6 +5,8 @@ void setup()
   Serial.begin(115200);
   Serial.printf("Starting %s %s\n", APP_NAME, APP_VERSION);
 
+  pinMode(LED_BUILTIN, OUTPUT);
+
   SPI.setSCK(6);
   SPI.setMOSI(7);
   SPI.setMISO(4);
