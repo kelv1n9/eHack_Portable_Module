@@ -516,14 +516,28 @@ void loop1()
     }
   }
 
-  if (now - batteryTimer >= BATTERY_CHECK_INTERVAL)
+  if (succsessfulConnection && (now - batteryTimer >= BATTERY_CHECK_INTERVAL))
   {
     uint8_t batteryVoltagePacket[3];
 
     batteryTimer = millis();
     batVoltage = readBatteryVoltage();
     Serial.printf("Battery voltage: %.2fV\n", batVoltage);
-    communication.buildPacket(COMMAND_BATTERY_VOLTAGE, (uint8_t *)&batVoltage, 1, batteryVoltagePacket);
-    communication.sendPacket(batteryVoltagePacket, 3);
+    switch (currentMode)
+    {
+    case UHF_SPECTRUM:
+    case HF_SPECTRUM:
+    case HF_ACTIVITY:
+      break;
+
+    default:
+      communication.setMasterMode();
+      communication.init();
+      communication.buildPacket(COMMAND_BATTERY_VOLTAGE, (uint8_t *)&batVoltage, 1, batteryVoltagePacket);
+      communication.sendPacket(batteryVoltagePacket, 3);
+      communication.setSlaveMode();
+      communication.init();
+      break;
+    }
   }
 }
