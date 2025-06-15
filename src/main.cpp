@@ -425,7 +425,8 @@ void loop()
       initRadioAttack();
       initialized = true;
     }
-    radioChannel = random(0, 125);
+    int randomIndex = random(0, sizeof(full_channels) / sizeof(full_channels[0]));
+    radioChannel = full_channels[randomIndex];
     radio_RF24.setChannel(radioChannel);
     break;
   }
@@ -437,7 +438,8 @@ void loop()
       initRadioAttack();
       initialized = true;
     }
-    radioChannel = random(1, 15);
+    int randomIndex = random(0, sizeof(wifi_channels) / sizeof(wifi_channels[0]));
+    radioChannel = wifi_channels[randomIndex];
     radio_RF24.setChannel(radioChannel);
     break;
   }
@@ -464,6 +466,45 @@ void loop()
     }
     int randomIndex = random(0, sizeof(ble_channels) / sizeof(ble_channels[0]));
     radioChannel = ble_channels[randomIndex];
+    radio_RF24.setChannel(radioChannel);
+    break;
+  }
+  case UHF_USB_JAMMER:
+  {
+    if (!initialized)
+    {
+      Serial.println("Initializing UHF USB Jammer mode...");
+      initRadioAttack();
+      initialized = true;
+    }
+    int randomIndex = random(0, sizeof(usb_channels) / sizeof(usb_channels[0]));
+    radioChannel = usb_channels[randomIndex];
+    radio_RF24.setChannel(radioChannel);
+    break;
+  }
+  case UHF_VIDEO_JAMMER:
+  {
+    if (!initialized)
+    {
+      Serial.println("Initializing UHF VIDEO Jammer mode...");
+      initRadioAttack();
+      initialized = true;
+    }
+    int randomIndex = random(0, sizeof(video_channels) / sizeof(video_channels[0]));
+    radioChannel = video_channels[randomIndex];
+    radio_RF24.setChannel(radioChannel);
+    break;
+  }
+  case UHF_RC_JAMMER:
+  {
+    if (!initialized)
+    {
+      Serial.println("Initializing UHF RC Jammer mode...");
+      initRadioAttack();
+      initialized = true;
+    }
+    int randomIndex = random(0, sizeof(rc_channels) / sizeof(rc_channels[0]));
+    radioChannel = rc_channels[randomIndex];
     radio_RF24.setChannel(radioChannel);
     break;
   }

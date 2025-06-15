@@ -34,6 +34,9 @@ enum Mode
   UHF_WIFI_JAMMER,
   UHF_BT_JAMMER,
   UHF_BLE_JAMMER,
+  UHF_USB_JAMMER,
+  UHF_VIDEO_JAMMER,
+  UHF_RC_JAMMER,
 };
 
 Mode currentMode = IDLE;
@@ -245,6 +248,18 @@ Mode getModeFromPacket(uint8_t *data, uint8_t len)
   else if (mode == COMMAND_UHF_BLE_JAMMER)
   {
     return UHF_BLE_JAMMER;
+  }
+  else if (mode == COMMAND_UHF_USB_JAMMER)
+  {
+    return UHF_USB_JAMMER;
+  }
+  else if (mode == COMMAND_UHF_RC_JAMMER)
+  {
+    return UHF_RC_JAMMER;
+  }
+  else if (mode == COMMAND_UHF_VIDEO_JAMMER)
+  {
+    return UHF_VIDEO_JAMMER;
   }
 
   return IDLE;
