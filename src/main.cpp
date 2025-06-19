@@ -2,16 +2,12 @@
 
 void setup()
 {
-  delay(10000);
+  delay(7000);
   Serial.begin(115200);
-  Serial.printf("Starting %s %s\n", APP_NAME, APP_VERSION);
+  Serial.printf("Starting %s %s\n\n", APP_NAME, APP_VERSION);
 
   pinMode(LED_BUILTIN, OUTPUT);
-
-  pinMode(7, OUTPUT);
-  digitalWrite(7, HIGH);
-  pinMode(5, OUTPUT);
-  digitalWrite(5, HIGH);
+  digitalWrite(LED_BUILTIN, HIGH);
 
   SPI.setSCK(2);
   SPI.setMOSI(3);
@@ -41,13 +37,13 @@ void setup()
   {
     Serial.println("CC1101 initialization failed");
   }
-
+  
   // communication.setRadioNRF24();
-  // communication.setSlaveMode();
-  // communication.init();
+  communication.setRadioCC1101();
+  communication.setSlaveMode();
+  communication.init();
 
-  Serial.printf("Current mode: %d\n", currentMode);
-  while(1);
+  Serial.printf("Current mode: %d\n\n", currentMode);
 }
 
 void setup1()
@@ -55,7 +51,7 @@ void setup1()
 }
 
 // Loop for common tasks
-void loop()
+void loop1()
 {
   static uint32_t now = millis();
 
@@ -513,7 +509,7 @@ void loop()
 }
 
 // Loop for communication tasks
-void loop1()
+void loop()
 {
   static uint32_t now = millis();
 
@@ -526,10 +522,10 @@ void loop1()
     }
     else
     {
-      Serial.println("Connection failed");
+      // Serial.println("Connection failed");
     }
 
-    Serial.printf("Current mode: %d\n", currentMode);
+    // Serial.printf("Current mode: %d\n", currentMode);
   }
 
   if (succsessfulConnection && communication.getCurrentMode() == Slave && communication.receivePacket(recievedData, &recievedDataLen))

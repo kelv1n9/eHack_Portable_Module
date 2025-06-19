@@ -62,8 +62,8 @@ uint32_t batteryTimer;
 #define transmissions 5
 
 /* =================== SubGHz MHz ================== */
-#define GD0_PIN_CC 19
-#define CSN_PIN_CC 17
+#define GD0_PIN_CC 6
+#define CSN_PIN_CC 1
 #define RSSI_WINDOW_MS 100
 #define RSSI_STEP_MS 50
 #define RSSI_BUFFER_SIZE 90
@@ -282,8 +282,8 @@ float getFrequencyFromPacket(uint8_t *data, uint8_t len)
 
 void cc1101Init()
 {
-  ELECHOUSE_cc1101.setSpiPin(2, 4, 3, 1);
-
+  ELECHOUSE_cc1101.setSpiPin(2, 4, 3, CSN_PIN_CC);
+  
   ELECHOUSE_cc1101.setClb(1, 11, 13);
   ELECHOUSE_cc1101.setClb(2, 14, 17);
   ELECHOUSE_cc1101.setClb(3, 29, 33);
