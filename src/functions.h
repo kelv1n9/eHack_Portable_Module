@@ -119,8 +119,8 @@ volatile uint32_t niceCode = 0; // код Nice
 volatile bool niceCaptured = false;
 
 // ================= 2.4 GHZ ===========================/
-#define CE_PIN_NRF 21
-#define CSN_PIN_NRF 20
+#define CE_PIN_NRF 7
+#define CSN_PIN_NRF 5
 #define START_CHANNEL 45
 #define NUM_CHANNELS 126
 
@@ -283,11 +283,11 @@ float getFrequencyFromPacket(uint8_t *data, uint8_t len)
 void cc1101Init()
 {
   ELECHOUSE_cc1101.setSpiPin(2, 4, 3, CSN_PIN_CC);
-  
-  ELECHOUSE_cc1101.setClb(1, 11, 13);
-  ELECHOUSE_cc1101.setClb(2, 14, 17);
-  ELECHOUSE_cc1101.setClb(3, 29, 33);
-  ELECHOUSE_cc1101.setClb(4, 33, 34);
+
+  ELECHOUSE_cc1101.setClb(1, 8, 8);
+  ELECHOUSE_cc1101.setClb(2, 9, 12);
+  ELECHOUSE_cc1101.setClb(3, 18, 21);
+  ELECHOUSE_cc1101.setClb(4, 21, 22);
 
   ELECHOUSE_cc1101.Init();
   ELECHOUSE_cc1101.setModulation(2); // ASK

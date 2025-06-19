@@ -37,17 +37,23 @@ void setup()
   {
     Serial.println("CC1101 initialization failed");
   }
-  
+
   // communication.setRadioNRF24();
-  communication.setRadioCC1101();
-  communication.setSlaveMode();
-  communication.init();
+  // communication.setRadioCC1101();
+  // communication.setSlaveMode();
+  // communication.init();
 
   Serial.printf("Current mode: %d\n\n", currentMode);
+  while (1)
+  {
+  }
 }
 
 void setup1()
 {
+  while (1)
+  {
+  }
 }
 
 // Loop for common tasks
