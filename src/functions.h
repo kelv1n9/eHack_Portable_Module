@@ -267,7 +267,7 @@ float getFrequencyFromPacket(uint8_t *data, uint8_t len)
 
 void cc1101Init()
 {
-  ELECHOUSE_cc1101.setSpiPin(6, 4, 7, CSN_PIN_CC);
+  ELECHOUSE_cc1101.setSpiPin(2, 4, 3, 1);
 
   ELECHOUSE_cc1101.setClb(1, 11, 13);
   ELECHOUSE_cc1101.setClb(2, 14, 17);

@@ -2,13 +2,19 @@
 
 void setup()
 {
+  delay(10000);
   Serial.begin(115200);
   Serial.printf("Starting %s %s\n", APP_NAME, APP_VERSION);
 
   pinMode(LED_BUILTIN, OUTPUT);
 
-  SPI.setSCK(6);
-  SPI.setMOSI(7);
+  pinMode(7, OUTPUT);
+  digitalWrite(7, HIGH);
+  pinMode(5, OUTPUT);
+  digitalWrite(5, HIGH);
+
+  SPI.setSCK(2);
+  SPI.setMOSI(3);
   SPI.setMISO(4);
   SPI.begin();
 
@@ -23,9 +29,6 @@ void setup()
   else
   {
     Serial.println("RF24 initialization failed");
-    while (1)
-    {
-    }
   }
   radio_RF24.powerDown();
 
@@ -37,16 +40,14 @@ void setup()
   else
   {
     Serial.println("CC1101 initialization failed");
-    while (1)
-    {
-    }
   }
 
-  communication.setRadioNRF24();
-  communication.setSlaveMode();
-  communication.init();
+  // communication.setRadioNRF24();
+  // communication.setSlaveMode();
+  // communication.init();
 
   Serial.printf("Current mode: %d\n", currentMode);
+  while(1);
 }
 
 void setup1()
