@@ -2,7 +2,6 @@
 
 void setup()
 {
-  delay(7000);
   Serial.begin(115200);
   Serial.printf("Starting %s %s\n\n", APP_NAME, APP_VERSION);
 
@@ -10,56 +9,39 @@ void setup()
   digitalWrite(LED_BUILTIN, HIGH);
 
   SPI.setSCK(2);
-  SPI.setMOSI(3);
-  SPI.setMISO(4);
+  SPI.setTX(3);
+  SPI.setRX(4);
   SPI.begin();
+
+  cc1101Init();
+
+  // SPI1.setSCK(10);
+  // SPI1.setTX(11);
+  // SPI1.setRX(12);
+  // SPI1.begin();
+
+  // radio_RF24.begin(&SPI1);
+  radio_RF24.begin();
 
   analogReadResolution(12);
   batVoltage = readBatteryVoltage();
   EEPROM.begin(512);
 
-  if (radio_RF24.begin())
-  {
-    Serial.println("RF24 initialized successfully");
-  }
-  else
-  {
-    Serial.println("RF24 initialization failed");
-  }
-  radio_RF24.powerDown();
-
-  cc1101Init();
-  if (ELECHOUSE_cc1101.getCC1101())
-  {
-    Serial.println("CC1101 initialized successfully");
-  }
-  else
-  {
-    Serial.println("CC1101 initialization failed");
-  }
-
-  // communication.setRadioNRF24();
-  // communication.setRadioCC1101();
-  // communication.setSlaveMode();
-  // communication.init();
+  communication.setRadioNRF24();
+  communication.setSlaveMode();
+  communication.init();
 
   Serial.printf("Current mode: %d\n\n", currentMode);
-  while (1)
-  {
-  }
 }
 
 void setup1()
 {
-  while (1)
-  {
-  }
 }
 
 // Loop for common tasks
 void loop1()
 {
-  static uint32_t now = millis();
+  uint32_t now = millis();
 
   switch (currentMode)
   {
@@ -68,9 +50,10 @@ void loop1()
     if (!initializedIdle)
     {
       Serial.println("Initializing Idle mode...");
+      // digitalWrite(CSN_PIN_CC, HIGH);
+      // ELECHOUSE_cc1101.goSleep();
       communication.setRadioNRF24();
       communication.setSlaveMode();
-      ELECHOUSE_cc1101.goSleep();
       mySwitch.disableReceive();
       mySwitch.disableTransmit();
       detachInterrupt(GD0_PIN_CC);
@@ -517,7 +500,7 @@ void loop1()
 // Loop for communication tasks
 void loop()
 {
-  static uint32_t now = millis();
+  uint32_t now = millis();
 
   if (!succsessfulConnection)
   {
@@ -560,28 +543,28 @@ void loop()
     }
   }
 
-  if (succsessfulConnection && (now - batteryTimer >= BATTERY_CHECK_INTERVAL))
-  {
-    uint8_t batteryVoltagePacket[3];
+  // if (succsessfulConnection && (now - batteryTimer >= BATTERY_CHECK_INTERVAL))
+  // {
+  //   uint8_t batteryVoltagePacket[3];
 
-    batteryTimer = millis();
-    batVoltage = readBatteryVoltage();
-    Serial.printf("Battery voltage: %.2fV\n", batVoltage);
-    switch (currentMode)
-    {
-    case UHF_SPECTRUM:
-    case HF_SPECTRUM:
-    case HF_ACTIVITY:
-      break;
+  //   batteryTimer = millis();
+  //   batVoltage = readBatteryVoltage();
+  //   Serial.printf("Battery voltage: %.2fV\n", batVoltage);
+  //   switch (currentMode)
+  //   {
+  //   case UHF_SPECTRUM:
+  //   case HF_SPECTRUM:
+  //   case HF_ACTIVITY:
+  //     break;
 
-    default:
-      communication.setMasterMode();
-      communication.init();
-      communication.buildPacket(COMMAND_BATTERY_VOLTAGE, (uint8_t *)&batVoltage, 1, batteryVoltagePacket);
-      communication.sendPacket(batteryVoltagePacket, 3);
-      communication.setSlaveMode();
-      communication.init();
-      break;
-    }
-  }
+  //   default:
+  //     communication.setMasterMode();
+  //     communication.init();
+  //     communication.buildPacket(COMMAND_BATTERY_VOLTAGE, (uint8_t *)&batVoltage, 1, batteryVoltagePacket);
+  //     communication.sendPacket(batteryVoltagePacket, 3);
+  //     communication.setSlaveMode();
+  //     communication.init();
+  //     break;
+  //   }
+  // }
 }
