@@ -120,7 +120,7 @@ volatile bool niceCaptured = false;
 
 // ================= 2.4 GHZ ===========================/
 #define CE_PIN_NRF 7
-#define CSN_PIN_NRF 5
+#define CSN_PIN_NRF 13
 #define START_CHANNEL 45
 #define NUM_CHANNELS 126
 
@@ -308,7 +308,6 @@ void cc1101Init()
 
 void cc1101ReadyMode()
 {
-  ELECHOUSE_cc1101.Init();
   ELECHOUSE_cc1101.setModulation(2);
   ELECHOUSE_cc1101.setRxBW(135);
   ELECHOUSE_cc1101.setPA(12);

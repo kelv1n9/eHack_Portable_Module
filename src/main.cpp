@@ -15,13 +15,12 @@ void setup()
 
   cc1101Init();
 
-  // SPI1.setSCK(10);
-  // SPI1.setTX(11);
-  // SPI1.setRX(12);
-  // SPI1.begin();
+  SPI1.setSCK(10);
+  SPI1.setTX(11);
+  SPI1.setRX(12);
+  SPI1.begin();
 
-  // radio_RF24.begin(&SPI1);
-  radio_RF24.begin();
+  radio_RF24.begin(&SPI1);
 
   analogReadResolution(12);
   batVoltage = readBatteryVoltage();
@@ -50,15 +49,14 @@ void loop1()
     if (!initializedIdle)
     {
       Serial.println("Initializing Idle mode...");
-      // digitalWrite(CSN_PIN_CC, HIGH);
-      // ELECHOUSE_cc1101.goSleep();
+      ELECHOUSE_cc1101.goSleep();
       communication.setRadioNRF24();
       communication.setSlaveMode();
+      ELECHOUSE_cc1101.goSleep();
       mySwitch.disableReceive();
       mySwitch.disableTransmit();
       detachInterrupt(GD0_PIN_CC);
       digitalWrite(GD0_PIN_CC, LOW);
-      stopRadioAttack();
       initializedIdle = true;
       initialized = false;
     }
@@ -289,6 +287,8 @@ void loop1()
       ELECHOUSE_cc1101.SetTx(radioFrequency);
 
       mySwitch.setProtocol(mySwitch.getReceivedProtocol());
+      mySwitch.setRepeatTransmit(15);                             
+      mySwitch.setPulseLength(mySwitch.getReceivedDelay());                        
       mySwitch.send(mySwitch.getReceivedValue(), mySwitch.getReceivedBitlength());
       initialized = false;
     }
@@ -502,27 +502,18 @@ void loop()
 {
   uint32_t now = millis();
 
-  if (!succsessfulConnection)
+  if (!succsessfulConnection && communication.checkConnection(5000))
   {
-    if (communication.checkConnection(1000))
-    {
-      Serial.println("Connection established");
-      succsessfulConnection = true;
-    }
-    else
-    {
-      // Serial.println("Connection failed");
-    }
-
-    // Serial.printf("Current mode: %d\n", currentMode);
+    Serial.println("Connection established");
+    succsessfulConnection = true;
   }
 
-  if (succsessfulConnection && communication.getCurrentMode() == Slave && communication.receivePacket(recievedData, &recievedDataLen))
+  if (succsessfulConnection && communication.receivePacket(recievedData, &recievedDataLen))
   {
     currentMode = getModeFromPacket(recievedData, recievedDataLen);
     Serial.printf("Current mode: %d\n", currentMode);
-    initializedIdle = false;
     Serial.printf("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
+    initializedIdle = false;
     switch (currentMode)
     {
     case UHF_SPECTRUM:
@@ -535,42 +526,42 @@ void loop()
       communication.init();
       break;
 
-    default:
-      communication.setRadioNRF24();
-      communication.setSlaveMode();
-      communication.init();
-      break;
+      // default:
+      //   communication.setRadioNRF24();
+      //   communication.setSlaveMode();
+      //   communication.init();
+      //   break;
     }
   }
 
-  if (succsessfulConnection && (now - batteryTimer >= BATTERY_CHECK_INTERVAL))
-  {
-    const uint8_t packetSize = sizeof(batVoltage) + 2;
-    uint8_t batteryVoltagePacket[packetSize];
+  // if (succsessfulConnection && (now - batteryTimer >= BATTERY_CHECK_INTERVAL))
+  // {
+  //   const uint8_t packetSize = sizeof(batVoltage) + 2;
+  //   uint8_t batteryVoltagePacket[packetSize];
 
-    batteryTimer = millis();
-    batVoltage = readBatteryVoltage();
-    Serial.printf("Battery voltage: %.2fV\n", batVoltage);
-    switch (currentMode)
-    {
-    case UHF_SPECTRUM:
-    case HF_SPECTRUM:
-    case HF_ACTIVITY:
-      break;
+  //   batteryTimer = millis();
+  //   batVoltage = readBatteryVoltage();
+  //   Serial.printf("Battery voltage: %.2fV\n", batVoltage);
+  //   Serial.printf("Current mode: %d\n", currentMode);
+  //   switch (currentMode)
+  //   {
+  //   case UHF_SPECTRUM:
+  //   case HF_SPECTRUM:
+  //   case HF_ACTIVITY:
+  //     break;
 
-    default:
-      radio_RF24.stopListening();
-      // communication.setMasterMode();
-      // communication.init();
-      // communication.buildPacket(COMMAND_BATTERY_VOLTAGE, (uint8_t *)&batVoltage, 1, batteryVoltagePacket);
-      communication.buildPacket(COMMAND_BATTERY_VOLTAGE, (uint8_t *)&batVoltage, sizeof(batVoltage), batteryVoltagePacket);
-      // communication.sendPacket(batteryVoltagePacket, 3);
-      communication.sendPacket(batteryVoltagePacket, packetSize);
-      Serial.printf("Sent");
-      // communication.setSlaveMode();
-      // communication.init();
-      radio_RF24.startListening();
-      break;
-    }
-  }
+  //   default:
+  //     radio_RF24.stopListening();
+  //     // communication.setMasterMode();
+  //     // communication.init();
+  //     // communication.buildPacket(COMMAND_BATTERY_VOLTAGE, (uint8_t *)&batVoltage, 1, batteryVoltagePacket);
+  //     communication.buildPacket(COMMAND_BATTERY_VOLTAGE, (uint8_t *)&batVoltage, sizeof(batVoltage), batteryVoltagePacket);
+  //     // communication.sendPacket(batteryVoltagePacket, 3);
+  //     communication.sendPacket(batteryVoltagePacket, packetSize);
+  //     // communication.setSlaveMode();
+  //     // communication.init();
+  //     radio_RF24.startListening();
+  //     break;
+  //   }
+  // }
 }
