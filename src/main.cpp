@@ -571,6 +571,7 @@ void loop()
     Serial.println("Connection established");
     succsessfulConnection = true;
     currentLedMode = LED_BLINK_SLOW;
+    batteryTimer = millis() - BATTERY_CHECK_INTERVAL;
   }
 
   if (succsessfulConnection && communication.receivePacket(recievedData, &recievedDataLen) && currentMode != UHF_VIDEO_JAMMER)
