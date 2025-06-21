@@ -89,6 +89,9 @@ uint16_t capturedLength;
 uint16_t capturedProtocol;
 uint16_t capturedDelay;
 
+float radioFrequency = raFrequencies[1];
+bool attackIsActive = false;
+
 /* ================ Barrier =================== */
 #define MAX_DELTA_T_BARRIER 200
 #define AN_MOTORS_PULSE 412
@@ -267,7 +270,7 @@ Mode getModeFromPacket(uint8_t *data, uint8_t len)
 /*********************** CC1101 ***************************/
 float getFrequencyFromPacket(uint8_t *data, uint8_t len)
 {
-  if (len < 4 || data[0] != PROTOCOL_HEADER)
+  if (len < 3 || data[0] != PROTOCOL_HEADER)
   {
     return raFrequencies[1]; // Default frequency
   }
