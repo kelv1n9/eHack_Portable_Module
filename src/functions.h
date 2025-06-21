@@ -45,13 +45,13 @@ bool initialized = false;
 bool initializedIdle = false;
 
 /* ================= Battery ================== */
-#define BATTERY_COEFFICIENT 0.9611905
+#define BATTERY_COEFFICIENT 1.0
 #define R1 200000 // 200k
 #define R2 100000 // 100k
 #define BATTERY_RESISTANCE_COEFFICIENT (1 + R1 / R2)
 #define V_REF 3.3
 
-#define BATTERY_CHECK_INTERVAL 5000
+#define BATTERY_CHECK_INTERVAL 20000
 #define BATTERY_READ_ITERATIONS 10
 
 float batVoltage;

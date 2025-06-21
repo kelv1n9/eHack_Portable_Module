@@ -538,34 +538,15 @@ void loop()
     initializedIdle = false;
   }
 
-  // if (succsessfulConnection && (now - batteryTimer >= BATTERY_CHECK_INTERVAL))
-  // {
-  //   const uint8_t packetSize = sizeof(batVoltage) + 2;
-  //   uint8_t batteryVoltagePacket[packetSize];
+  if (succsessfulConnection && (now - batteryTimer >= BATTERY_CHECK_INTERVAL))
+  {
+    const uint8_t packetSize = sizeof(batVoltage) + 2;
+    uint8_t batteryVoltagePacket[packetSize];
 
-  //   batteryTimer = millis();
-  //   batVoltage = readBatteryVoltage();
-  //   Serial.printf("Battery voltage: %.2fV\n", batVoltage);
-  //   Serial.printf("Current mode: %d\n", currentMode);
-  //   switch (currentMode)
-  //   {
-  //   case UHF_SPECTRUM:
-  //   case HF_SPECTRUM:
-  //   case HF_ACTIVITY:
-  //     break;
-
-  //   default:
-  //     radio_RF24.stopListening();
-  //     // communication.setMasterMode();
-  //     // communication.init();
-  //     // communication.buildPacket(COMMAND_BATTERY_VOLTAGE, (uint8_t *)&batVoltage, 1, batteryVoltagePacket);
-  //     communication.buildPacket(COMMAND_BATTERY_VOLTAGE, (uint8_t *)&batVoltage, sizeof(batVoltage), batteryVoltagePacket);
-  //     // communication.sendPacket(batteryVoltagePacket, 3);
-  //     communication.sendPacket(batteryVoltagePacket, packetSize);
-  //     // communication.setSlaveMode();
-  //     // communication.init();
-  //     radio_RF24.startListening();
-  //     break;
-  //   }
-  // }
+    batteryTimer = millis();
+    batVoltage = readBatteryVoltage();
+    Serial.printf("Battery voltage: %.2fV\n", batVoltage);
+    communication.buildPacket(COMMAND_BATTERY_VOLTAGE, (uint8_t *)&batVoltage, sizeof(batVoltage), batteryVoltagePacket);
+    communication.sendPacket(batteryVoltagePacket, packetSize);
+  }
 }
