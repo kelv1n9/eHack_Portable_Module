@@ -54,11 +54,27 @@ void loop1()
   {
     if (!initializedIdle)
     {
+      if (succsessfulConnection)
+      {
+        switch (currentMode)
+        {
+        case UHF_SPECTRUM:
+        case UHF_ALL_JAMMER:
+        case UHF_WIFI_JAMMER:
+        case UHF_BT_JAMMER:
+        case UHF_BLE_JAMMER:
+        case UHF_USB_JAMMER:
+        case UHF_VIDEO_JAMMER:
+        case UHF_RC_JAMMER:
+          stopRadioAttack();
+          break;
+        }
+      }
+
       Serial.println("Initializing Idle mode...");
-      ELECHOUSE_cc1101.goSleep();
+      // ELECHOUSE_cc1101.goSleep();
       communication.setRadioNRF24();
       communication.setSlaveMode();
-      ELECHOUSE_cc1101.goSleep();
       mySwitch.disableReceive();
       mySwitch.disableTransmit();
       detachInterrupt(GD0_PIN_CC);
@@ -399,6 +415,8 @@ void loop1()
     if (!initialized)
     {
       Serial.println("Initializing UHF All Jammer mode...");
+      communication.setRadioCC1101();
+      communication.init();
       initRadioAttack();
       initialized = true;
     }
@@ -412,6 +430,8 @@ void loop1()
     if (!initialized)
     {
       Serial.println("Initializing UHF WiFi Jammer mode...");
+      communication.setRadioCC1101();
+      communication.init();
       initRadioAttack();
       initialized = true;
     }
@@ -425,6 +445,8 @@ void loop1()
     if (!initialized)
     {
       Serial.println("Initializing UHF Bluetooth Jammer mode...");
+      communication.setRadioCC1101();
+      communication.init();
       initRadioAttack();
       initialized = true;
     }
@@ -438,6 +460,8 @@ void loop1()
     if (!initialized)
     {
       Serial.println("Initializing UHF BLE Jammer mode...");
+      communication.setRadioCC1101();
+      communication.init();
       initRadioAttack();
       initialized = true;
     }
@@ -451,6 +475,8 @@ void loop1()
     if (!initialized)
     {
       Serial.println("Initializing UHF USB Jammer mode...");
+      communication.setRadioCC1101();
+      communication.init();
       initRadioAttack();
       initialized = true;
     }
@@ -464,6 +490,8 @@ void loop1()
     if (!initialized)
     {
       Serial.println("Initializing UHF VIDEO Jammer mode...");
+      communication.setRadioCC1101();
+      communication.init();
       initRadioAttack();
       initialized = true;
     }
@@ -477,6 +505,8 @@ void loop1()
     if (!initialized)
     {
       Serial.println("Initializing UHF RC Jammer mode...");
+      communication.setRadioCC1101();
+      communication.init();
       initRadioAttack();
       initialized = true;
     }
@@ -499,26 +529,13 @@ void loop()
     succsessfulConnection = true;
   }
 
-  if (succsessfulConnection && communication.receivePacket(recievedData, &recievedDataLen))
+  if (succsessfulConnection && communication.receivePacket(recievedData, &recievedDataLen) && currentMode != UHF_VIDEO_JAMMER)
   {
     currentMode = getModeFromPacket(recievedData, recievedDataLen);
     radioFrequency = getFrequencyFromPacket(recievedData, recievedDataLen);
-    Serial.printf("Current mode: %d\n", currentMode);
     Serial.printf("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
-    Serial.printf("Setting frequency to: %.2f MHz\n", radioFrequency);
+    Serial.printf("Received frequency: %.2f MHz\n", radioFrequency);
     initializedIdle = false;
-    switch (currentMode)
-    {
-    case UHF_SPECTRUM:
-    case UHF_ALL_JAMMER:
-    case UHF_WIFI_JAMMER:
-    case UHF_BT_JAMMER:
-    case UHF_BLE_JAMMER:
-      communication.setRadioCC1101();
-      communication.setSlaveMode();
-      communication.init();
-      break;
-    }
   }
 
   // if (succsessfulConnection && (now - batteryTimer >= BATTERY_CHECK_INTERVAL))

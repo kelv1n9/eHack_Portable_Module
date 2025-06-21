@@ -43,19 +43,13 @@ void DataTransmission::init()
 {
     if (currentRadio == RADIO_CC1101)
     {
-        radioCC1101->Init();
+        radioCC1101->Init();    
+        radioCC1101->setGDO0(GD0_PIN_CC);
         radioCC1101->setCCMode(1);
-        if (currentMode == Master)
-        {
-            radioCC1101->SetTx(433.92);
-        }
-        else if (currentMode == Slave)
-        {
-            radioCC1101->SetRx(433.92);
-        }
+        radioCC1101->setModulation(0); 
+        radioCC1101->setMHZ(433.92);   
+        radioCC1101->setSyncMode(2);
         radioCC1101->setCrc(1);
-        radioCC1101->setDRate(500);
-
         DBG("CC1101 radio initialized\n");
     }
     if (currentRadio == RADIO_NRF24)
@@ -135,7 +129,7 @@ bool DataTransmission::sendPacket(uint8_t *data, uint8_t len)
 
 bool DataTransmission::receivePacket(uint8_t *data, uint8_t *len)
 {
-    if (currentRadio == RADIO_CC1101 && radioCC1101->CheckReceiveFlag())
+    if (currentRadio == RADIO_CC1101 && radioCC1101->CheckReceiveFlag() && radioCC1101->CheckCRC())
     {
         *len = radioCC1101->ReceiveData(data);
 
