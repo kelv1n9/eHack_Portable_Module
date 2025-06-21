@@ -30,6 +30,8 @@ void setup()
   communication.init();
 
   Serial.printf("Current mode: %d\n\n", currentMode);
+
+  currentLedMode = LED_ON;
 }
 
 void setup1()
@@ -40,12 +42,34 @@ void setup1()
 void loop1()
 {
   uint32_t now = millis();
-  static uint32_t connectedLedTimer;
+  uint16_t onTime = 0, offTime = 0;
 
-  if (succsessfulConnection && now - connectedLedTimer >= 1000)
+  switch (currentLedMode)
   {
-    connectedLedTimer = now;
-    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+  case LED_ON:
+    digitalWrite(LED_BUILTIN, HIGH);
+    return;
+
+  case LED_OFF:
+    digitalWrite(LED_BUILTIN, LOW);
+    return;
+
+  case LED_BLINK_SLOW:
+    onTime = 500;
+    offTime = 500;
+    break;
+
+  case LED_BLINK_FAST:
+    onTime = 100;
+    offTime = 800;
+    break;
+  }
+
+  if ((ledState && now - ledTimer >= onTime) || (!ledState && now - ledTimer >= offTime))
+  {
+    ledState = !ledState;
+    digitalWrite(LED_BUILTIN, ledState);
+    ledTimer = now;
   }
 
   switch (currentMode)
@@ -69,6 +93,8 @@ void loop1()
           stopRadioAttack();
           break;
         }
+
+        currentLedMode = LED_BLINK_SLOW;
       }
 
       Serial.println("Initializing Idle mode...");
@@ -91,6 +117,7 @@ void loop1()
     {
       Serial.println("Initializing HF Spectrum mode...");
       cc1101ReadyMode();
+      currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
 
@@ -102,6 +129,7 @@ void loop1()
     {
       Serial.println("Initializing HF Activity mode...");
       cc1101ReadyMode();
+      currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
 
@@ -118,6 +146,7 @@ void loop1()
       mySwitch.disableTransmit();
       ELECHOUSE_cc1101.SetRx(radioFrequency);
       attachInterrupt(digitalPinToInterrupt(GD0_PIN_CC), captureBarrierCode, CHANGE);
+      currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
 
@@ -162,6 +191,7 @@ void loop1()
       mySwitch.disableTransmit();
       ELECHOUSE_cc1101.SetRx(radioFrequency);
       attachInterrupt(digitalPinToInterrupt(GD0_PIN_CC), captureBarrierCode, CHANGE);
+      currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
 
@@ -208,6 +238,7 @@ void loop1()
       mySwitch.disableReceive();
       mySwitch.disableTransmit();
       ELECHOUSE_cc1101.SetTx(raFrequencies[1]);
+      currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
 
@@ -242,6 +273,7 @@ void loop1()
       mySwitch.disableReceive();
       mySwitch.disableTransmit();
       ELECHOUSE_cc1101.SetTx(raFrequencies[1]);
+      currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
 
@@ -277,6 +309,7 @@ void loop1()
       mySwitch.enableReceive(GD0_PIN_CC);
       ELECHOUSE_cc1101.SetRx(radioFrequency);
       mySwitch.resetAvailable();
+      currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
 
@@ -319,6 +352,7 @@ void loop1()
       mySwitch.enableReceive(GD0_PIN_CC);
       ELECHOUSE_cc1101.SetRx(radioFrequency);
       mySwitch.resetAvailable();
+      currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
 
@@ -361,6 +395,7 @@ void loop1()
       mySwitch.disableReceive();
       mySwitch.disableTransmit();
       ELECHOUSE_cc1101.SetTx(raFrequencies[1]);
+      currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
 
@@ -389,6 +424,7 @@ void loop1()
       mySwitch.disableReceive();
       mySwitch.disableTransmit();
       ELECHOUSE_cc1101.SetTx(raFrequencies[1]);
+      currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
 
@@ -418,6 +454,7 @@ void loop1()
       communication.setRadioCC1101();
       communication.init();
       initRadioAttack();
+      currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
     int randomIndex = random(0, sizeof(full_channels) / sizeof(full_channels[0]));
@@ -433,6 +470,7 @@ void loop1()
       communication.setRadioCC1101();
       communication.init();
       initRadioAttack();
+      currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
     int randomIndex = random(0, sizeof(wifi_channels) / sizeof(wifi_channels[0]));
@@ -448,6 +486,7 @@ void loop1()
       communication.setRadioCC1101();
       communication.init();
       initRadioAttack();
+      currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
     int randomIndex = random(0, sizeof(bluetooth_channels) / sizeof(bluetooth_channels[0]));
@@ -463,6 +502,7 @@ void loop1()
       communication.setRadioCC1101();
       communication.init();
       initRadioAttack();
+      currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
     int randomIndex = random(0, sizeof(ble_channels) / sizeof(ble_channels[0]));
@@ -478,6 +518,7 @@ void loop1()
       communication.setRadioCC1101();
       communication.init();
       initRadioAttack();
+      currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
     int randomIndex = random(0, sizeof(usb_channels) / sizeof(usb_channels[0]));
@@ -493,6 +534,7 @@ void loop1()
       communication.setRadioCC1101();
       communication.init();
       initRadioAttack();
+      currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
     int randomIndex = random(0, sizeof(video_channels) / sizeof(video_channels[0]));
@@ -508,6 +550,7 @@ void loop1()
       communication.setRadioCC1101();
       communication.init();
       initRadioAttack();
+      currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
     int randomIndex = random(0, sizeof(rc_channels) / sizeof(rc_channels[0]));
@@ -527,6 +570,7 @@ void loop()
   {
     Serial.println("Connection established");
     succsessfulConnection = true;
+    currentLedMode = LED_BLINK_SLOW;
   }
 
   if (succsessfulConnection && communication.receivePacket(recievedData, &recievedDataLen) && currentMode != UHF_VIDEO_JAMMER)

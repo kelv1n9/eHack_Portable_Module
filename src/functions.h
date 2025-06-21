@@ -44,6 +44,18 @@ Mode currentMode = IDLE;
 bool initialized = false;
 bool initializedIdle = false;
 
+enum LedMode {
+    LED_OFF,
+    LED_ON,
+    LED_BLINK_SLOW,    
+    LED_BLINK_FAST
+};
+
+LedMode currentLedMode = LED_ON;
+
+static uint32_t ledTimer = 0;
+static bool ledState = false;
+
 /* ================= Battery ================== */
 #define BATTERY_COEFFICIENT 1.0
 #define R1 200000 // 200k
