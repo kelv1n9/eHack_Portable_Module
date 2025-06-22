@@ -98,9 +98,7 @@ void loop1()
       }
 
       Serial.println("Initializing Idle mode...");
-      // ELECHOUSE_cc1101.goSleep();
-      communication.setRadioNRF24();
-      communication.setSlaveMode();
+      ELECHOUSE_cc1101.goSleep();
       mySwitch.disableReceive();
       mySwitch.disableTransmit();
       detachInterrupt(GD0_PIN_CC);
@@ -451,15 +449,14 @@ void loop1()
     if (!initialized)
     {
       Serial.println("Initializing UHF All Jammer mode...");
-      communication.setRadioCC1101();
-      communication.init();
       initRadioAttack();
       currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
-    int randomIndex = random(0, sizeof(full_channels) / sizeof(full_channels[0]));
-    radioChannel = full_channels[randomIndex];
+    static int current_channel_index = 0;
+    radioChannel = full_channels[current_channel_index];
     radio_RF24.setChannel(radioChannel);
+    current_channel_index = (current_channel_index + 1) % (sizeof(full_channels) / sizeof(full_channels[0]));
     break;
   }
   case UHF_WIFI_JAMMER:
@@ -467,15 +464,14 @@ void loop1()
     if (!initialized)
     {
       Serial.println("Initializing UHF WiFi Jammer mode...");
-      communication.setRadioCC1101();
-      communication.init();
       initRadioAttack();
       currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
-    int randomIndex = random(0, sizeof(wifi_channels) / sizeof(wifi_channels[0]));
-    radioChannel = wifi_channels[randomIndex];
+    static int current_channel_index = 0;
+    radioChannel = wifi_channels[current_channel_index];
     radio_RF24.setChannel(radioChannel);
+    current_channel_index = (current_channel_index + 1) % (sizeof(wifi_channels) / sizeof(wifi_channels[0]));
     break;
   }
   case UHF_BT_JAMMER:
@@ -483,15 +479,14 @@ void loop1()
     if (!initialized)
     {
       Serial.println("Initializing UHF Bluetooth Jammer mode...");
-      communication.setRadioCC1101();
-      communication.init();
       initRadioAttack();
       currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
-    int randomIndex = random(0, sizeof(bluetooth_channels) / sizeof(bluetooth_channels[0]));
-    radioChannel = bluetooth_channels[randomIndex];
+    static int current_channel_index = 0;
+    radioChannel = bluetooth_channels[current_channel_index];
     radio_RF24.setChannel(radioChannel);
+    current_channel_index = (current_channel_index + 1) % (sizeof(bluetooth_channels) / sizeof(bluetooth_channels[0]));
     break;
   }
   case UHF_BLE_JAMMER:
@@ -499,15 +494,14 @@ void loop1()
     if (!initialized)
     {
       Serial.println("Initializing UHF BLE Jammer mode...");
-      communication.setRadioCC1101();
-      communication.init();
       initRadioAttack();
       currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
-    int randomIndex = random(0, sizeof(ble_channels) / sizeof(ble_channels[0]));
-    radioChannel = ble_channels[randomIndex];
+    static int current_channel_index = 0;
+    radioChannel = ble_channels[current_channel_index];
     radio_RF24.setChannel(radioChannel);
+    current_channel_index = (current_channel_index + 1) % (sizeof(ble_channels) / sizeof(ble_channels[0]));
     break;
   }
   case UHF_USB_JAMMER:
@@ -515,15 +509,14 @@ void loop1()
     if (!initialized)
     {
       Serial.println("Initializing UHF USB Jammer mode...");
-      communication.setRadioCC1101();
-      communication.init();
       initRadioAttack();
       currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
-    int randomIndex = random(0, sizeof(usb_channels) / sizeof(usb_channels[0]));
-    radioChannel = usb_channels[randomIndex];
+    static int current_channel_index = 0;
+    radioChannel = usb_channels[current_channel_index];
     radio_RF24.setChannel(radioChannel);
+    current_channel_index = (current_channel_index + 1) % (sizeof(usb_channels) / sizeof(usb_channels[0]));
     break;
   }
   case UHF_VIDEO_JAMMER:
@@ -531,15 +524,14 @@ void loop1()
     if (!initialized)
     {
       Serial.println("Initializing UHF VIDEO Jammer mode...");
-      communication.setRadioCC1101();
-      communication.init();
       initRadioAttack();
       currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
-    int randomIndex = random(0, sizeof(video_channels) / sizeof(video_channels[0]));
-    radioChannel = video_channels[randomIndex];
+    static int current_channel_index = 0;
+    radioChannel = video_channels[current_channel_index];
     radio_RF24.setChannel(radioChannel);
+    current_channel_index = (current_channel_index + 1) % (sizeof(video_channels) / sizeof(video_channels[0]));
     break;
   }
   case UHF_RC_JAMMER:
@@ -547,15 +539,14 @@ void loop1()
     if (!initialized)
     {
       Serial.println("Initializing UHF RC Jammer mode...");
-      communication.setRadioCC1101();
-      communication.init();
       initRadioAttack();
       currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
-    int randomIndex = random(0, sizeof(rc_channels) / sizeof(rc_channels[0]));
-    radioChannel = rc_channels[randomIndex];
+    static int current_channel_index = 0;
+    radioChannel = rc_channels[current_channel_index];
     radio_RF24.setChannel(radioChannel);
+    current_channel_index = (current_channel_index + 1) % (sizeof(rc_channels) / sizeof(rc_channels[0]));
     break;
   }
   }
@@ -574,24 +565,38 @@ void loop()
     batteryTimer = millis() - BATTERY_CHECK_INTERVAL;
   }
 
-  if (succsessfulConnection && communication.receivePacket(recievedData, &recievedDataLen) && currentMode != UHF_VIDEO_JAMMER)
+  switch (currentMode)
   {
-    currentMode = getModeFromPacket(recievedData, recievedDataLen);
-    radioFrequency = getFrequencyFromPacket(recievedData, recievedDataLen);
-    Serial.printf("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
-    Serial.printf("Received frequency: %.2f MHz\n", radioFrequency);
-    initializedIdle = false;
+  case UHF_SPECTRUM:
+  case UHF_ALL_JAMMER:
+  case UHF_WIFI_JAMMER:
+  case UHF_BT_JAMMER:
+  case UHF_BLE_JAMMER:
+  case UHF_USB_JAMMER:
+  case UHF_VIDEO_JAMMER:
+  case UHF_RC_JAMMER:
+    break;
+
+  default:
+  {
+    if (succsessfulConnection && (now - batteryTimer >= BATTERY_CHECK_INTERVAL))
+    {
+      uint8_t batteryVoltagePacket[6];
+      batteryTimer = millis();
+      batVoltage = readBatteryVoltage();
+      Serial.printf("Battery voltage: %.2fV\n", batVoltage);
+      communication.buildPacket(COMMAND_BATTERY_VOLTAGE, (uint8_t *)&batVoltage, sizeof(batVoltage), batteryVoltagePacket);
+      communication.sendPacket(batteryVoltagePacket, 6);
+    }
+    if (succsessfulConnection && communication.receivePacket(recievedData, &recievedDataLen))
+    {
+      currentMode = getModeFromPacket(recievedData, recievedDataLen);
+      radioFrequency = getFrequencyFromPacket(recievedData, recievedDataLen);
+      Serial.printf("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
+      Serial.printf("Received frequency: %.2f MHz\n", radioFrequency);
+      initializedIdle = false;
+    }
+    break;
   }
-
-  if (succsessfulConnection && (now - batteryTimer >= BATTERY_CHECK_INTERVAL))
-  {
-    const uint8_t packetSize = sizeof(batVoltage) + 2;
-    uint8_t batteryVoltagePacket[packetSize];
-
-    batteryTimer = millis();
-    batVoltage = readBatteryVoltage();
-    Serial.printf("Battery voltage: %.2fV\n", batVoltage);
-    communication.buildPacket(COMMAND_BATTERY_VOLTAGE, (uint8_t *)&batVoltage, sizeof(batVoltage), batteryVoltagePacket);
-    communication.sendPacket(batteryVoltagePacket, packetSize);
   }
 }

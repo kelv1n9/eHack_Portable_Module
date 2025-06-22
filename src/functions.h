@@ -57,7 +57,7 @@ static uint32_t ledTimer = 0;
 static bool ledState = false;
 
 /* ================= Battery ================== */
-#define BATTERY_COEFFICIENT 1.0
+#define BATTERY_COEFFICIENT 0.97
 #define R1 200000 // 200k
 #define R2 100000 // 100k
 #define BATTERY_RESISTANCE_COEFFICIENT (1 + R1 / R2)
@@ -306,36 +306,19 @@ void cc1101Init()
   ELECHOUSE_cc1101.setClb(4, 21, 22);
 
   ELECHOUSE_cc1101.Init();
-  ELECHOUSE_cc1101.setModulation(2);
-  ELECHOUSE_cc1101.setRxBW(135);
   ELECHOUSE_cc1101.setGDO0(GD0_PIN_CC);
-  ELECHOUSE_cc1101.setPA(12);
-  ELECHOUSE_cc1101.setMHZ(raFrequencies[1]);
   ELECHOUSE_cc1101.setDcFilterOff(0);
-  ELECHOUSE_cc1101.setPQT(0);
-  ELECHOUSE_cc1101.setPRE(0);
-  ELECHOUSE_cc1101.setSyncMode(0);
-  ELECHOUSE_cc1101.setFEC(0);
-  ELECHOUSE_cc1101.setCCMode(0);
-  ELECHOUSE_cc1101.setPktFormat(0);
-  ELECHOUSE_cc1101.setAdrChk(0);
-  ELECHOUSE_cc1101.goSleep();
+  ELECHOUSE_cc1101.setRxBW(135);
+  ELECHOUSE_cc1101.setPA(12);
 }
 
 void cc1101ReadyMode()
 {
-  ELECHOUSE_cc1101.Init();
+  // ELECHOUSE_cc1101.Init();
   ELECHOUSE_cc1101.setCCMode(0);
+  ELECHOUSE_cc1101.setSyncMode(0);
   ELECHOUSE_cc1101.setCrc(0);
   ELECHOUSE_cc1101.setModulation(2);
-  ELECHOUSE_cc1101.setRxBW(135);
-  ELECHOUSE_cc1101.setPA(12);
-  ELECHOUSE_cc1101.setMHZ(raFrequencies[1]);
-  ELECHOUSE_cc1101.setPQT(0);
-  ELECHOUSE_cc1101.setPRE(0);
-  ELECHOUSE_cc1101.setSyncMode(0);
-  ELECHOUSE_cc1101.setFEC(0);
-  ELECHOUSE_cc1101.setAdrChk(0);
 }
 
 //================================== TESLA ======================================*/
