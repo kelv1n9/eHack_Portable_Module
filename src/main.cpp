@@ -550,6 +550,8 @@ void loop()
     batteryTimer = millis() - BATTERY_CHECK_INTERVAL;
   }
 
+  static uint32_t UHF_Timer;
+
   switch (currentMode)
   {
   case UHF_SPECTRUM:
@@ -560,7 +562,31 @@ void loop()
   case UHF_USB_JAMMER:
   case UHF_VIDEO_JAMMER:
   case UHF_RC_JAMMER:
+  {
+    if (now - UHF_Timer > 5000)
+    {
+      stopRadioAttack();
+      communication.setRadioNRF24();
+      communication.setMasterMode();
+      communication.init();
+
+      if (communication.receivePacket(recievedData, &recievedDataLen) && recievedData[0] == PROTOCOL_HEADER)
+      {
+        currentMode = getModeFromPacket(recievedData, recievedDataLen);
+        radioFrequency = getFrequencyFromPacket(recievedData, recievedDataLen);
+        Serial.printf("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
+        Serial.printf("Received frequency: %.2f MHz\n", radioFrequency);
+        initializedIdle = false;
+      }
+      else
+      {
+        initRadioAttack();
+        Serial.println("Exit");
+      }
+      UHF_Timer = now;
+    }
     break;
+  }
 
   default:
   {

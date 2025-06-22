@@ -690,4 +690,5 @@ void initRadioAttack()
 void stopRadioAttack()
 {
   radio_RF24.stopConstCarrier();
+  radio_RF24.powerDown();
 }
