@@ -570,13 +570,20 @@ void loop()
       communication.setMasterMode();
       communication.init();
 
-      if (communication.receivePacket(recievedData, &recievedDataLen) && recievedData[0] == PROTOCOL_HEADER)
+      if (communication.receivePacket(recievedData, &recievedDataLen))
       {
-        currentMode = getModeFromPacket(recievedData, recievedDataLen);
-        radioFrequency = getFrequencyFromPacket(recievedData, recievedDataLen);
-        Serial.printf("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
-        Serial.printf("Received frequency: %.2f MHz\n", radioFrequency);
+        Serial.print("Received: ");
+        for (int i = 0; i < recievedDataLen; i++)
+          Serial.write(recievedData[i]);
+        Serial.println();
+      }
+
+      if (communication.receivePacket(recievedData, &recievedDataLen) && (recievedData[0] == 'P' && recievedData[1] == 'I' && recievedData[2] == 'N' && recievedData[3] == 'G'))
+      {
+        currentMode = IDLE;
         initializedIdle = false;
+        byte pong[4] = {'P', 'I', 'N', 'G'};
+        communication.sendPacket(pong, 4);
       }
       else
       {
