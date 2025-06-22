@@ -44,11 +44,12 @@ Mode currentMode = IDLE;
 bool initialized = false;
 bool initializedIdle = false;
 
-enum LedMode {
-    LED_OFF,
-    LED_ON,
-    LED_BLINK_SLOW,    
-    LED_BLINK_FAST
+enum LedMode
+{
+  LED_OFF,
+  LED_ON,
+  LED_BLINK_SLOW,
+  LED_BLINK_FAST
 };
 
 LedMode currentLedMode = LED_ON;
@@ -174,6 +175,10 @@ DataTransmission communication(&radio_RF24, &ELECHOUSE_cc1101);
 
 bool succsessfulConnection = false;
 
+uint32_t pingSentTime;
+uint32_t checkConnectionTimer;
+bool awaitingPong = false;
+
 uint8_t recievedData[32];
 uint8_t recievedDataLen = 0;
 
@@ -196,7 +201,7 @@ Mode getModeFromPacket(uint8_t *data, uint8_t len)
 {
   uint8_t mode = data[1];
 
-  if (mode == COMMAND_IDLE || data[0] != PROTOCOL_HEADER)
+  if (mode == COMMAND_IDLE)
   {
     return IDLE;
   }
@@ -283,7 +288,7 @@ Mode getModeFromPacket(uint8_t *data, uint8_t len)
 /*********************** CC1101 ***************************/
 float getFrequencyFromPacket(uint8_t *data, uint8_t len)
 {
-  if (len < 3 || data[0] != PROTOCOL_HEADER)
+  if (len < 3)
   {
     return raFrequencies[1]; // Default frequency
   }

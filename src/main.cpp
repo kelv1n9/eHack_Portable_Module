@@ -42,35 +42,6 @@ void setup1()
 void loop1()
 {
   uint32_t now = millis();
-  uint16_t onTime = 0, offTime = 0;
-
-  switch (currentLedMode)
-  {
-  case LED_ON:
-    digitalWrite(LED_BUILTIN, HIGH);
-    return;
-
-  case LED_OFF:
-    digitalWrite(LED_BUILTIN, LOW);
-    return;
-
-  case LED_BLINK_SLOW:
-    onTime = 500;
-    offTime = 500;
-    break;
-
-  case LED_BLINK_FAST:
-    onTime = 100;
-    offTime = 800;
-    break;
-  }
-
-  if ((ledState && now - ledTimer >= onTime) || (!ledState && now - ledTimer >= offTime))
-  {
-    ledState = !ledState;
-    digitalWrite(LED_BUILTIN, ledState);
-    ledTimer = now;
-  }
 
   switch (currentMode)
   {
@@ -93,8 +64,6 @@ void loop1()
           stopRadioAttack();
           break;
         }
-
-        currentLedMode = LED_BLINK_SLOW;
       }
 
       Serial.println("Initializing Idle mode...");
@@ -556,6 +525,35 @@ void loop1()
 void loop()
 {
   uint32_t now = millis();
+  uint16_t onTime = 0, offTime = 0;
+
+  switch (currentLedMode)
+  {
+  case LED_ON:
+    digitalWrite(LED_BUILTIN, HIGH);
+    break;
+
+  case LED_OFF:
+    digitalWrite(LED_BUILTIN, LOW);
+    break;
+
+  case LED_BLINK_SLOW:
+    onTime = 500;
+    offTime = 500;
+    break;
+
+  case LED_BLINK_FAST:
+    onTime = 100;
+    offTime = 800;
+    break;
+  }
+
+  if ((ledState && now - ledTimer >= onTime) || (!ledState && now - ledTimer >= offTime))
+  {
+    ledState = !ledState;
+    digitalWrite(LED_BUILTIN, ledState);
+    ledTimer = now;
+  }
 
   if (!succsessfulConnection && communication.checkConnection(5000))
   {
@@ -579,22 +577,70 @@ void loop()
 
   default:
   {
-    if (succsessfulConnection && (now - batteryTimer >= BATTERY_CHECK_INTERVAL))
+    if (succsessfulConnection)
     {
-      uint8_t batteryVoltagePacket[6];
-      batteryTimer = millis();
-      batVoltage = readBatteryVoltage();
-      Serial.printf("Battery voltage: %.2fV\n", batVoltage);
-      communication.buildPacket(COMMAND_BATTERY_VOLTAGE, (uint8_t *)&batVoltage, sizeof(batVoltage), batteryVoltagePacket);
-      communication.sendPacket(batteryVoltagePacket, 6);
+      if (now - batteryTimer >= BATTERY_CHECK_INTERVAL)
+      {
+        uint8_t batteryVoltagePacket[6];
+        batteryTimer = millis();
+        batVoltage = readBatteryVoltage();
+        Serial.printf("Battery voltage: %.2fV\n", batVoltage);
+        communication.buildPacket(COMMAND_BATTERY_VOLTAGE, (uint8_t *)&batVoltage, sizeof(batVoltage), batteryVoltagePacket);
+        communication.sendPacket(batteryVoltagePacket, 6);
+      }
+      if (communication.receivePacket(recievedData, &recievedDataLen))
+      {
+        if (recievedData[0] == PROTOCOL_HEADER)
+        {
+          currentMode = getModeFromPacket(recievedData, recievedDataLen);
+          radioFrequency = getFrequencyFromPacket(recievedData, recievedDataLen);
+          Serial.printf("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
+          Serial.printf("Received frequency: %.2f MHz\n", radioFrequency);
+          initializedIdle = false;
+        }
+
+        if (recievedData[0] == 'P' && recievedData[1] == 'I' && recievedData[2] == 'N' && recievedData[3] == 'G')
+        {
+          byte ping[4] = {'P', 'O', 'N', 'G'};
+          communication.sendPacket(ping, 4);
+        }
+
+        if (recievedData[0] == 'P' && recievedData[1] == 'O' && recievedData[2] == 'N' && recievedData[3] == 'G')
+        {
+          DBG("Master: PONG received! Connection OK.\n");
+          awaitingPong = false;
+          succsessfulConnection = true;
+        }
+      }
+
+      if (awaitingPong && (now - pingSentTime > 1000))
+      {
+        Serial.println("Connection LOST (PONG timeout)!");
+        succsessfulConnection = false;
+        awaitingPong = false;
+      }
+
+      if (!awaitingPong && (now - checkConnectionTimer > 5000))
+      {
+        byte ping[4] = {'P', 'I', 'N', 'G'};
+        if (communication.sendPacket(ping, 4))
+        {
+          DBG("Master: PING sent.\n");
+          awaitingPong = true;
+          pingSentTime = now;
+          checkConnectionTimer = now;
+        }
+        else
+        {
+          succsessfulConnection = false;
+        }
+      }
+
+      currentLedMode = LED_BLINK_SLOW;
     }
-    if (succsessfulConnection && communication.receivePacket(recievedData, &recievedDataLen))
+    else
     {
-      currentMode = getModeFromPacket(recievedData, recievedDataLen);
-      radioFrequency = getFrequencyFromPacket(recievedData, recievedDataLen);
-      Serial.printf("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
-      Serial.printf("Received frequency: %.2f MHz\n", radioFrequency);
-      initializedIdle = false;
+      currentLedMode = LED_ON;
     }
     break;
   }
