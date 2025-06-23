@@ -171,6 +171,12 @@ ChannelHistory stored[126];
 uint8_t radioChannel = 0;
 
 // ================== Communication ===========================/
+#define CONNECTION_DELAY 10000
+
+byte ping[4] = {'P', 'I', 'N', 'G'};
+byte pong[4] = {'P', 'O', 'N', 'G'};
+byte inited[4] = {'I', 'N', 'I', 'T'};
+
 DataTransmission communication(&radio_RF24, &ELECHOUSE_cc1101);
 
 bool succsessfulConnection = false;

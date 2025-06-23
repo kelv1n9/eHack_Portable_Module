@@ -570,19 +570,11 @@ void loop()
       communication.setMasterMode();
       communication.init();
 
-      if (communication.receivePacket(recievedData, &recievedDataLen))
-      {
-        Serial.print("Received: ");
-        for (int i = 0; i < recievedDataLen; i++)
-          Serial.write(recievedData[i]);
-        Serial.println();
-      }
-
       if (communication.receivePacket(recievedData, &recievedDataLen) && (recievedData[0] == 'P' && recievedData[1] == 'I' && recievedData[2] == 'N' && recievedData[3] == 'G'))
       {
+        Serial.println("RECIEVED");
         currentMode = IDLE;
         initializedIdle = false;
-        byte pong[4] = {'P', 'I', 'N', 'G'};
         communication.sendPacket(pong, 4);
       }
       else
@@ -614,15 +606,41 @@ void loop()
         {
           currentMode = getModeFromPacket(recievedData, recievedDataLen);
           radioFrequency = getFrequencyFromPacket(recievedData, recievedDataLen);
+          if (initialized)
+          {
+            switch (currentMode)
+            {
+            case HF_SPECTRUM:
+            case HF_ACTIVITY:
+            case HF_BARRIER_SCAN:
+            case HF_SCAN:
+            {
+              Serial.println("RX");
+              ELECHOUSE_cc1101.SetRx(radioFrequency);
+              break;
+            }
+            case HF_BARRIER_REPLAY:
+            case HF_BARRIER_BRUTE_CAME:
+            case HF_BARRIER_BRUTE_NICE:
+            case HF_REPLAY:
+            case HF_JAMMER:
+            {
+              Serial.println("TX");
+              ELECHOUSE_cc1101.SetTx(radioFrequency);
+              break;
+            }
+            }
+          }
           Serial.printf("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
           Serial.printf("Received frequency: %.2f MHz\n", radioFrequency);
           initializedIdle = false;
+          if (currentMode != IDLE)
+              communication.sendPacket(inited, 4);
         }
 
         if (recievedData[0] == 'P' && recievedData[1] == 'I' && recievedData[2] == 'N' && recievedData[3] == 'G')
         {
-          byte ping[4] = {'P', 'O', 'N', 'G'};
-          communication.sendPacket(ping, 4);
+          communication.sendPacket(pong, 4);
         }
 
         if (recievedData[0] == 'P' && recievedData[1] == 'O' && recievedData[2] == 'N' && recievedData[3] == 'G')
@@ -640,9 +658,8 @@ void loop()
         awaitingPong = false;
       }
 
-      if (!awaitingPong && (now - checkConnectionTimer > 5000))
+      if (!awaitingPong && (now - checkConnectionTimer > CONNECTION_DELAY))
       {
-        byte ping[4] = {'P', 'I', 'N', 'G'};
         if (communication.sendPacket(ping, 4))
         {
           DBG("Master: PING sent.\n");
