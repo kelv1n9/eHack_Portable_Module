@@ -512,84 +512,76 @@ void loop1()
 void loop()
 {
   uint32_t now = millis();
-  uint16_t onTime = 0, offTime = 0;
+  uint32_t onTime = 0;
+  uint32_t offTime = 0;
 
   switch (currentLedMode)
   {
   case LED_ON:
     digitalWrite(LED_BUILTIN, HIGH);
     break;
-
   case LED_OFF:
     digitalWrite(LED_BUILTIN, LOW);
     break;
-
   case LED_BLINK_SLOW:
     onTime = 500;
     offTime = 500;
     break;
-
   case LED_BLINK_FAST:
     onTime = 100;
     offTime = 800;
     break;
   }
 
-  if ((ledState && now - ledTimer >= onTime) || (!ledState && now - ledTimer >= offTime))
+  if (onTime > 0 || offTime > 0)
   {
-    ledState = !ledState;
-    digitalWrite(LED_BUILTIN, ledState);
-    ledTimer = now;
-  }
-
-  if (!succsessfulConnection && communication.checkConnection(5000))
-  {
-    Serial.println("Connection established");
-    succsessfulConnection = true;
-    currentLedMode = LED_BLINK_SLOW;
-    batteryTimer = millis() - BATTERY_CHECK_INTERVAL;
-  }
-
-  static uint32_t UHF_Timer;
-
-  switch (currentMode)
-  {
-  case UHF_SPECTRUM:
-  case UHF_ALL_JAMMER:
-  case UHF_WIFI_JAMMER:
-  case UHF_BT_JAMMER:
-  case UHF_BLE_JAMMER:
-  case UHF_USB_JAMMER:
-  case UHF_VIDEO_JAMMER:
-  case UHF_RC_JAMMER:
-  {
-    if (now - UHF_Timer > 5000)
+    if ((ledState && now - ledTimer >= onTime) || (!ledState && now - ledTimer >= offTime))
     {
-      stopRadioAttack();
-      communication.setRadioNRF24();
-      communication.setMasterMode();
-      communication.init();
-
-      if (communication.receivePacket(recievedData, &recievedDataLen) && (recievedData[0] == 'P' && recievedData[1] == 'I' && recievedData[2] == 'N' && recievedData[3] == 'G'))
-      {
-        Serial.println("RECIEVED");
-        currentMode = IDLE;
-        initializedIdle = false;
-        communication.sendPacket(pong, 4);
-      }
-      else
-      {
-        initRadioAttack();
-        Serial.println("Exit");
-      }
-      UHF_Timer = now;
+      ledState = !ledState;
+      digitalWrite(LED_BUILTIN, ledState);
+      ledTimer = now;
     }
-    break;
   }
 
-  default:
+  if (!succsessfulConnection)
   {
-    if (succsessfulConnection)
+    if (communication.receivePacket(recievedData, &recievedDataLen) && recievedDataLen == 4)
+    {
+      if (recievedData[0] == 'P' && recievedData[1] == 'I' && recievedData[2] == 'N' && recievedData[3] == 'G')
+      {
+        Serial.printf("Slave: PING received. Sending PONG...\n");
+        if (communication.sendPacket(pong, 4))
+        {
+          Serial.printf("Slave: PONG sent successfully.\n");
+          Serial.println("Connection established");
+          succsessfulConnection = true;
+          currentLedMode = LED_BLINK_SLOW;
+          batteryTimer = millis() - BATTERY_CHECK_INTERVAL;
+        }
+        else
+        {
+          Serial.printf("Slave: PONG send failed.\n");
+        }
+      }
+    }
+
+    currentLedMode = LED_ON;
+  }
+  else
+  {
+    switch (currentMode)
+    {
+    case UHF_SPECTRUM:
+    case UHF_ALL_JAMMER:
+    case UHF_WIFI_JAMMER:
+    case UHF_BT_JAMMER:
+    case UHF_BLE_JAMMER:
+    case UHF_USB_JAMMER:
+    case UHF_VIDEO_JAMMER:
+    case UHF_RC_JAMMER:
+      break;
+
+    default:
     {
       if (now - batteryTimer >= BATTERY_CHECK_INTERVAL)
       {
@@ -600,12 +592,16 @@ void loop()
         communication.buildPacket(COMMAND_BATTERY_VOLTAGE, (uint8_t *)&batVoltage, sizeof(batVoltage), batteryVoltagePacket);
         communication.sendPacket(batteryVoltagePacket, 6);
       }
+
       if (communication.receivePacket(recievedData, &recievedDataLen))
       {
         if (recievedData[0] == PROTOCOL_HEADER)
         {
           currentMode = getModeFromPacket(recievedData, recievedDataLen);
           radioFrequency = getFrequencyFromPacket(recievedData, recievedDataLen);
+          Serial.printf("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
+          Serial.printf("Received frequency: %.2f MHz\n", radioFrequency);
+
           if (initialized)
           {
             switch (currentMode)
@@ -614,38 +610,31 @@ void loop()
             case HF_ACTIVITY:
             case HF_BARRIER_SCAN:
             case HF_SCAN:
-            {
-              Serial.println("RX");
               ELECHOUSE_cc1101.SetRx(radioFrequency);
               break;
-            }
             case HF_BARRIER_REPLAY:
             case HF_BARRIER_BRUTE_CAME:
             case HF_BARRIER_BRUTE_NICE:
             case HF_REPLAY:
             case HF_JAMMER:
-            {
-              Serial.println("TX");
               ELECHOUSE_cc1101.SetTx(radioFrequency);
               break;
             }
-            }
           }
-          Serial.printf("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
-          Serial.printf("Received frequency: %.2f MHz\n", radioFrequency);
           initializedIdle = false;
           if (currentMode != IDLE)
-              communication.sendPacket(inited, 4);
+          {
+            communication.sendPacket(inited, 4);
+          }
         }
-
-        if (recievedData[0] == 'P' && recievedData[1] == 'I' && recievedData[2] == 'N' && recievedData[3] == 'G')
+        else if (recievedData[0] == 'P' && recievedData[1] == 'I' && recievedData[2] == 'N' && recievedData[3] == 'G')
         {
           communication.sendPacket(pong, 4);
         }
-
-        if (recievedData[0] == 'P' && recievedData[1] == 'O' && recievedData[2] == 'N' && recievedData[3] == 'G')
+        else if (recievedData[0] == 'P' && recievedData[1] == 'O' && recievedData[2] == 'N' && recievedData[3] == 'G')
         {
-          DBG("Master: PONG received! Connection OK.\n");
+          Serial.printf("Master: PONG received! Connection OK.\n");
+          currentLedMode = LED_BLINK_SLOW;
           awaitingPong = false;
           succsessfulConnection = true;
         }
@@ -662,7 +651,7 @@ void loop()
       {
         if (communication.sendPacket(ping, 4))
         {
-          DBG("Master: PING sent.\n");
+          Serial.printf("Master: PING sent.\n");
           awaitingPong = true;
           pingSentTime = now;
           checkConnectionTimer = now;
@@ -672,12 +661,8 @@ void loop()
           succsessfulConnection = false;
         }
       }
+      break;
     }
-    else
-    {
-      currentLedMode = LED_ON;
     }
-    break;
-  }
   }
 }
