@@ -478,7 +478,7 @@ void loop()
         }
         else if (recievedData[0] == 'P' && recievedData[1] == 'O' && recievedData[2] == 'N' && recievedData[3] == 'G')
         {
-          Serial.printf("Master: PONG received! Connection OK.\n");
+          Serial.printf("Slave: PONG received! Connection OK.\n");
           currentLedMode = LED_BLINK_SLOW;
           awaitingPong = false;
           successfullyConnected = true;
@@ -496,7 +496,7 @@ void loop()
       {
         if (communication.sendPacket(ping, 32))
         {
-          Serial.printf("Master: PING sent.\n");
+          Serial.printf("Slave: PING sent.\n");
           awaitingPong = true;
           pingSentTime = now;
           checkConnectionTimer = now;

@@ -138,7 +138,7 @@ ChannelHistory stored[126];
 uint8_t radioChannel = 0;
 
 // ================== Communication ===========================/
-#define CONNECTION_DELAY 10000
+#define CONNECTION_DELAY 5000
 
 byte ping[32] = {'P', 'I', 'N', 'G'};
 byte pong[32] = {'P', 'O', 'N', 'G'};
