@@ -25,7 +25,6 @@ void setup()
   analogReadResolution(12);
   batVoltage = readBatteryVoltage();
 
-  communication.setRadioNRF24();
   communication.setSlaveMode();
   communication.init();
 

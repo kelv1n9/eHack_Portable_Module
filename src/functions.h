@@ -144,7 +144,7 @@ byte ping[32] = {'P', 'I', 'N', 'G'};
 byte pong[32] = {'P', 'O', 'N', 'G'};
 byte inited[32] = {'I', 'N', 'I', 'T'};
 
-DataTransmission communication(&radio_RF24, &ELECHOUSE_cc1101);
+DataTransmission communication(&radio_RF24);
 
 bool successfullyConnected = false;
 
