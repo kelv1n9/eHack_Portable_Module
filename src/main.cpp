@@ -598,12 +598,12 @@ void loop()
     {
       if (now - batteryTimer >= BATTERY_CHECK_INTERVAL)
       {
-        uint8_t batteryVoltagePacket[6];
+        uint8_t batteryVoltagePacket[32];
         batteryTimer = millis();
         batVoltage = readBatteryVoltage();
         Serial.printf("Battery voltage: %.2fV\n", batVoltage);
         communication.buildPacket(COMMAND_BATTERY_VOLTAGE, (uint8_t *)&batVoltage, sizeof(batVoltage), batteryVoltagePacket);
-        communication.sendPacket(batteryVoltagePacket, 6);
+        communication.sendPacket(batteryVoltagePacket, 32);
       }
 
       if (communication.receivePacket(recievedData, &recievedDataLen))
