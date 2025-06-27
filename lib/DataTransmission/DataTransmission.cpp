@@ -57,7 +57,8 @@ void DataTransmission::init()
     else if (currentRadio == RADIO_NRF24)
     {
         radioNRF24->powerUp();
-        radioNRF24->enableDynamicPayloads();
+        // radioNRF24->enableDynamicPayloads();
+        radioNRF24->setPayloadSize(32);
         radioNRF24->setAutoAck(true);
         radioNRF24->setDataRate(RF24_2MBPS);
         radioNRF24->setCRCLength(RF24_CRC_16);
@@ -146,13 +147,13 @@ bool DataTransmission::receivePacket(uint8_t *data, uint8_t *len)
     }
     else if (currentRadio == RADIO_NRF24 && radioNRF24->available())
     {
-        uint8_t size = radioNRF24->getDynamicPayloadSize();
-
-        if (size <= 1 || size > 10)
-        {
-            radioNRF24->flush_rx();
-            return false;
-        }
+        // uint8_t size = radioNRF24->getDynamicPayloadSize();
+        uint8_t size = radioNRF24->getPayloadSize();
+        // if (size <= 1 || size > 10)
+        // {
+        //     radioNRF24->flush_rx();
+        //     return false;
+        // }
 
         *len = size;
         radioNRF24->read(data, *len);

@@ -179,7 +179,7 @@ byte inited[4] = {'I', 'N', 'I', 'T'};
 
 DataTransmission communication(&radio_RF24, &ELECHOUSE_cc1101);
 
-bool succsessfulConnection = false;
+bool successfullyConnected = false;
 
 uint32_t pingSentTime;
 uint32_t checkConnectionTimer;

@@ -43,7 +43,7 @@ void loop1()
 {
   uint32_t now = millis();
 
-  if (succsessfulConnection)
+  if (successfullyConnected)
   {
     switch (currentMode)
     {
@@ -78,12 +78,24 @@ void loop1()
     }
     case HF_ACTIVITY:
     {
+      static uint32_t lastStepMs = now;
+
       if (!initialized)
       {
         Serial.println("Initializing HF Activity mode...");
+        pinMode(GD0_PIN_CC, INPUT);
         cc1101ReadyMode();
+        ELECHOUSE_cc1101.SetRx(raFrequencies[currentFreqIndex]);
         currentLedMode = LED_BLINK_FAST;
+        radio_RF24.stopListening();
         initialized = true;
+      }
+
+      if (successfullyConnected && now - lastStepMs >= RSSI_STEP_MS)
+      {
+        currentRssi = ELECHOUSE_cc1101.getRssi();
+        Serial.printf("RSSI: %d\n", currentRssi);
+        lastStepMs = now;
       }
 
       break;
@@ -543,18 +555,18 @@ void loop()
     }
   }
 
-  if (!succsessfulConnection)
+  if (!successfullyConnected)
   {
-    if (communication.receivePacket(recievedData, &recievedDataLen) && recievedDataLen == 4)
+    if (communication.receivePacket(recievedData, &recievedDataLen))
     {
       if (recievedData[0] == 'P' && recievedData[1] == 'I' && recievedData[2] == 'N' && recievedData[3] == 'G')
       {
         Serial.printf("Slave: PING received. Sending PONG...\n");
-        if (communication.sendPacket(pong, 4))
+        if (communication.sendPacket(pong, 32))
         {
           Serial.printf("Slave: PONG sent successfully.\n");
           Serial.println("Connection established");
-          succsessfulConnection = true;
+          successfullyConnected = true;
           currentLedMode = LED_BLINK_SLOW;
           batteryTimer = millis() - BATTERY_CHECK_INTERVAL;
         }
@@ -579,6 +591,7 @@ void loop()
     case UHF_USB_JAMMER:
     case UHF_VIDEO_JAMMER:
     case UHF_RC_JAMMER:
+    case HF_ACTIVITY:
       break;
 
     default:
@@ -624,32 +637,32 @@ void loop()
           initializedIdle = false;
           if (currentMode != IDLE)
           {
-            communication.sendPacket(inited, 4);
+            communication.sendPacket(inited, 32);
           }
         }
         else if (recievedData[0] == 'P' && recievedData[1] == 'I' && recievedData[2] == 'N' && recievedData[3] == 'G')
         {
-          communication.sendPacket(pong, 4);
+          communication.sendPacket(pong, 32);
         }
         else if (recievedData[0] == 'P' && recievedData[1] == 'O' && recievedData[2] == 'N' && recievedData[3] == 'G')
         {
           Serial.printf("Master: PONG received! Connection OK.\n");
           currentLedMode = LED_BLINK_SLOW;
           awaitingPong = false;
-          succsessfulConnection = true;
+          successfullyConnected = true;
         }
       }
 
       if (awaitingPong && (now - pingSentTime > 1000))
       {
         Serial.println("Connection LOST (PONG timeout)!");
-        succsessfulConnection = false;
+        successfullyConnected = false;
         awaitingPong = false;
       }
 
       if (!awaitingPong && (now - checkConnectionTimer > CONNECTION_DELAY))
       {
-        if (communication.sendPacket(ping, 4))
+        if (communication.sendPacket(ping, 32))
         {
           Serial.printf("Master: PING sent.\n");
           awaitingPong = true;
@@ -658,7 +671,7 @@ void loop()
         }
         else
         {
-          succsessfulConnection = false;
+          successfullyConnected = false;
         }
       }
       break;
