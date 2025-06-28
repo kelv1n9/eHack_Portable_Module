@@ -1,6 +1,6 @@
 #pragma once
 
-// #define DEBUG_eHack
+#define DEBUG_eHack
 
 #ifdef DEBUG_eHack
 #define DBG(...)                \
@@ -26,7 +26,7 @@
 #include "RF24.h"
 
 #define APP_NAME "eHack Portable"
-#define APP_VERSION "v0.0.1"
+#define APP_VERSION "v1.0.0"
 
 // Modes
 enum Mode
@@ -153,7 +153,7 @@ ChannelHistory stored[126];
 uint8_t radioChannel = 0;
 
 // ================== Communication ===========================/
-#define CONNECTION_DELAY 5000
+#define CONNECTION_DELAY 2000
 
 byte ping[32] = {'P', 'I', 'N', 'G'};
 byte pong[32] = {'P', 'O', 'N', 'G'};

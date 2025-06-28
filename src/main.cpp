@@ -463,8 +463,6 @@ void loop()
           {
             switch (currentMode)
             {
-            case HF_SPECTRUM:
-            case HF_ACTIVITY:
             case HF_SCAN:
               ELECHOUSE_cc1101.SetRx(radioFrequency);
               break;
@@ -487,13 +485,12 @@ void loop()
         else if (recievedData[0] == 'P' && recievedData[1] == 'O' && recievedData[2] == 'N' && recievedData[3] == 'G')
         {
           DBG("Slave: PONG received! Connection OK.\n");
-          currentLedMode = LED_BLINK_SLOW;
           awaitingPong = false;
           successfullyConnected = true;
         }
       }
 
-      if (awaitingPong && (now - pingSentTime > 1000))
+      if (awaitingPong && (now - pingSentTime > CONNECTION_DELAY))
       {
         DBG("Connection LOST (PONG timeout)!\n");
         successfullyConnected = false;
@@ -512,6 +509,7 @@ void loop()
         else
         {
           successfullyConnected = false;
+          awaitingPong = false;
         }
       }
       break;
