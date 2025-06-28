@@ -50,16 +50,14 @@ void loop1()
     {
       if (!initializedIdle)
       {
-        Serial.println("Initializing Idle mode...");
-        ELECHOUSE_cc1101.goSleep();
         mySwitch.disableReceive();
         mySwitch.disableTransmit();
-        detachInterrupt(GD0_PIN_CC);
+        mySwitch.resetAvailable();
         digitalWrite(GD0_PIN_CC, LOW);
         currentLedMode = LED_BLINK_SLOW;
-        initializedIdle = true;
         initialized = false;
         attackIsActive = false;
+        initializedIdle = true;
       }
       break;
     }
@@ -70,12 +68,10 @@ void loop1()
 
       if (!initialized)
       {
-        Serial.println("Initializing HF Spectrum mode...");
         pinMode(GD0_PIN_CC, INPUT);
-        cc1101ReadyMode();
-        currentLedMode = LED_BLINK_FAST;
         ELECHOUSE_cc1101.SetRx(raFrequencies[currentScanFreq]);
         radio_RF24.stopListening();
+        currentLedMode = LED_BLINK_FAST;
         spectrumTimer = now;
         waitingForSettle = true;
         currentScanFreq = 0;
@@ -109,12 +105,10 @@ void loop1()
 
       if (!initialized)
       {
-        Serial.println("Initializing HF Activity mode...");
         pinMode(GD0_PIN_CC, INPUT);
-        cc1101ReadyMode();
         ELECHOUSE_cc1101.SetRx(raFrequencies[currentFreqIndex]);
-        currentLedMode = LED_BLINK_FAST;
         radio_RF24.stopListening();
+        currentLedMode = LED_BLINK_FAST;
         initialized = true;
       }
 
@@ -131,13 +125,9 @@ void loop1()
     {
       if (!initialized)
       {
-        Serial.println("Initializing HF Scan mode...");
-        cc1101ReadyMode();
         pinMode(GD0_PIN_CC, INPUT);
-        mySwitch.disableTransmit();
         mySwitch.enableReceive(GD0_PIN_CC);
         ELECHOUSE_cc1101.SetRx(radioFrequency);
-        mySwitch.resetAvailable();
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
       }
@@ -174,13 +164,9 @@ void loop1()
 
       if (!initialized)
       {
-        Serial.println("Initializing HF Replay mode...");
-        cc1101ReadyMode();
         pinMode(GD0_PIN_CC, INPUT);
-        mySwitch.disableTransmit();
         mySwitch.enableReceive(GD0_PIN_CC);
         ELECHOUSE_cc1101.SetRx(radioFrequency);
-        mySwitch.resetAvailable();
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
       }
@@ -218,11 +204,7 @@ void loop1()
     {
       if (!initialized)
       {
-        Serial.println("Initializing HF Jammer mode...");
-        cc1101ReadyMode();
         pinMode(GD0_PIN_CC, OUTPUT);
-        mySwitch.disableReceive();
-        mySwitch.disableTransmit();
         ELECHOUSE_cc1101.SetTx(raFrequencies[1]);
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
@@ -247,11 +229,7 @@ void loop1()
     {
       if (!initialized)
       {
-        Serial.println("Initializing HF Tesla mode...");
-        cc1101ReadyMode();
         pinMode(GD0_PIN_CC, OUTPUT);
-        mySwitch.disableReceive();
-        mySwitch.disableTransmit();
         ELECHOUSE_cc1101.SetTx(raFrequencies[1]);
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
