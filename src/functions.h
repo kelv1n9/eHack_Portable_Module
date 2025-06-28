@@ -153,11 +153,12 @@ ChannelHistory stored[126];
 uint8_t radioChannel = 0;
 
 // ================== Communication ===========================/
-#define CONNECTION_DELAY 2000
+#define CONNECTION_DELAY 5000
+#define NUMBER_OF_RETRIES 3
 
-byte ping[32] = {'P', 'I', 'N', 'G'};
-byte pong[32] = {'P', 'O', 'N', 'G'};
-byte inited[32] = {'I', 'N', 'I', 'T'};
+byte ping[4] = {'P', 'I', 'N', 'G'};
+byte pong[4] = {'P', 'O', 'N', 'G'};
+byte inited[4] = {'I', 'N', 'I', 'T'};
 
 DataTransmission communication(&radio_RF24);
 
@@ -169,6 +170,8 @@ bool awaitingPong = false;
 
 uint8_t recievedData[32];
 uint8_t recievedDataLen = 0;
+
+uint8_t batteryVoltagePacket[32];
 
 /*=================== FUNCTIONS ==========================*/
 /*********************** COMMON ***************************/

@@ -41,8 +41,6 @@ void setup1()
 // Loop for common tasks
 void loop1()
 {
-  uint32_t now = millis();
-
   if (successfullyConnected)
   {
     switch (currentMode)
@@ -73,7 +71,7 @@ void loop1()
         ELECHOUSE_cc1101.SetRx(raFrequencies[currentScanFreq]);
         radio_RF24.stopListening();
         currentLedMode = LED_BLINK_FAST;
-        spectrumTimer = now;
+        spectrumTimer = millis();
         waitingForSettle = true;
         currentScanFreq = 0;
         initialized = true;
@@ -81,7 +79,7 @@ void loop1()
 
       if (successfullyConnected && waitingForSettle)
       {
-        if (now - spectrumTimer >= 1.5 * RSSI_STEP_MS)
+        if (millis() - spectrumTimer >= RSSI_STEP_MS)
         {
           currentRssi = ELECHOUSE_cc1101.getRssi();
 
@@ -89,11 +87,13 @@ void loop1()
           data[0] = currentRssi;
           data[1] = currentScanFreq;
 
+          DBG("RSSI: %d, FREQ: %d\n", currentRssi, currentScanFreq);
+
           radio_RF24.write(&data, sizeof(data));
 
           currentScanFreq = (currentScanFreq + 1) % raFreqCount;
           ELECHOUSE_cc1101.SetRx(raFrequencies[currentScanFreq]);
-          spectrumTimer = now;
+          spectrumTimer = millis();
           waitingForSettle = true;
         }
       }
@@ -102,7 +102,7 @@ void loop1()
     }
     case HF_ACTIVITY:
     {
-      static uint32_t lastStepMs = now;
+      static uint32_t lastStepMs = millis();
 
       if (!initialized)
       {
@@ -113,11 +113,11 @@ void loop1()
         initialized = true;
       }
 
-      if (successfullyConnected && now - lastStepMs >= RSSI_STEP_MS)
+      if (successfullyConnected && millis() - lastStepMs >= RSSI_STEP_MS)
       {
         currentRssi = ELECHOUSE_cc1101.getRssi();
         radio_RF24.write(&currentRssi, sizeof(currentRssi));
-        lastStepMs = now;
+        lastStepMs = millis();
       }
 
       break;
@@ -161,7 +161,7 @@ void loop1()
     }
     case HF_REPLAY:
     {
-      static uint32_t attackTimer = now;
+      static uint32_t attackTimer = millis();
 
       if (!initialized)
       {
@@ -193,10 +193,10 @@ void loop1()
         attackIsActive = true;
       }
 
-      if (attackIsActive && now - attackTimer >= 1000)
+      if (attackIsActive && millis() - attackTimer >= 1000)
       {
         mySwitch.send(mySwitch.getReceivedValue(), mySwitch.getReceivedBitlength());
-        attackTimer = now;
+        attackTimer = millis();
       }
 
       break;
@@ -366,7 +366,6 @@ void loop1()
 // Loop for communication tasks
 void loop()
 {
-  uint32_t now = millis();
   uint32_t onTime = 0;
   uint32_t offTime = 0;
 
@@ -390,39 +389,40 @@ void loop()
 
   if (onTime > 0 || offTime > 0)
   {
-    if ((ledState && now - ledTimer >= onTime) || (!ledState && now - ledTimer >= offTime))
+    if ((ledState && millis() - ledTimer >= onTime) || (!ledState && millis() - ledTimer >= offTime))
     {
       ledState = !ledState;
       digitalWrite(LED_BUILTIN, ledState);
-      ledTimer = now;
+      ledTimer = millis();
     }
   }
 
   if (!successfullyConnected)
   {
+    currentLedMode = LED_ON;
+
     if (communication.receivePacket(recievedData, &recievedDataLen))
     {
       if (recievedData[0] == 'P' && recievedData[1] == 'I' && recievedData[2] == 'N' && recievedData[3] == 'G')
       {
         DBG("Slave: PING received. Sending PONG...\n");
-        if (communication.sendPacket(pong, 32))
+        if (communication.sendPacket(pong, sizeof(pong)))
         {
           DBG("Slave: PONG sent successfully.\n");
           DBG("Connection established\n");
+          checkConnectionTimer = millis();
           successfullyConnected = true;
           currentLedMode = LED_BLINK_SLOW;
           batteryTimer = millis() - BATTERY_CHECK_INTERVAL;
         }
         else
         {
-          DBG("Slave: PONG send failed.\n");
+          DBG("Slave: FAILED to send PONG\n");
         }
       }
     }
-
-    currentLedMode = LED_ON;
   }
-  else
+  else if (successfullyConnected)
   {
     switch (currentMode)
     {
@@ -440,24 +440,23 @@ void loop()
 
     default:
     {
-      if (now - batteryTimer >= BATTERY_CHECK_INTERVAL)
+      if (millis() - checkConnectionTimer > CONNECTION_DELAY)
       {
-        uint8_t batteryVoltagePacket[32];
-        batteryTimer = millis();
-        batVoltage = readBatteryVoltage();
-        DBG("Battery voltage: %.2fV\n", batVoltage);
-        communication.buildPacket(COMMAND_BATTERY_VOLTAGE, (uint8_t *)&batVoltage, sizeof(batVoltage), batteryVoltagePacket);
-        communication.sendPacket(batteryVoltagePacket, 32);
+        DBG("Slave: Connection LOST (Master timeout)!\n");
+        successfullyConnected = false;
+        return;
       }
 
       if (communication.receivePacket(recievedData, &recievedDataLen))
       {
         if (recievedData[0] == PROTOCOL_HEADER)
         {
+          checkConnectionTimer = millis();
           currentMode = getModeFromPacket(recievedData, recievedDataLen);
           radioFrequency = getFrequencyFromPacket(recievedData, recievedDataLen);
           DBG("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
           DBG("Received frequency: %.2f MHz\n", radioFrequency);
+          initializedIdle = false;
 
           if (initialized)
           {
@@ -472,7 +471,7 @@ void loop()
               break;
             }
           }
-          initializedIdle = false;
+
           if (currentMode != IDLE)
           {
             communication.sendPacket(inited, 32);
@@ -480,37 +479,21 @@ void loop()
         }
         else if (recievedData[0] == 'P' && recievedData[1] == 'I' && recievedData[2] == 'N' && recievedData[3] == 'G')
         {
-          communication.sendPacket(pong, 32);
-        }
-        else if (recievedData[0] == 'P' && recievedData[1] == 'O' && recievedData[2] == 'N' && recievedData[3] == 'G')
-        {
-          DBG("Slave: PONG received! Connection OK.\n");
-          awaitingPong = false;
-          successfullyConnected = true;
+          DBG("Master: PING received!\n");
+          checkConnectionTimer = millis();
+          if (communication.sendPacket(pong, sizeof(pong)))
+          {
+            DBG("Master: PONG sent! Connection OK.\n");
+          }
         }
       }
-
-      if (awaitingPong && (now - pingSentTime > CONNECTION_DELAY))
+      if (millis() - batteryTimer > BATTERY_CHECK_INTERVAL)
       {
-        DBG("Connection LOST (PONG timeout)!\n");
-        successfullyConnected = false;
-        awaitingPong = false;
-      }
-
-      if (!awaitingPong && (now - checkConnectionTimer > CONNECTION_DELAY))
-      {
-        if (communication.sendPacket(ping, 32))
-        {
-          DBG("Slave: PING sent.\n");
-          awaitingPong = true;
-          pingSentTime = now;
-          checkConnectionTimer = now;
-        }
-        else
-        {
-          successfullyConnected = false;
-          awaitingPong = false;
-        }
+        batVoltage = readBatteryVoltage();
+        DBG("Battery voltage: %.2fV\n", batVoltage);
+        uint8_t batteryVoltagePacketLen = communication.buildPacket(COMMAND_BATTERY_VOLTAGE, (uint8_t *)&batVoltage, sizeof(batVoltage), batteryVoltagePacket);
+        communication.sendPacket(batteryVoltagePacket, batteryVoltagePacketLen);
+        batteryTimer = millis();
       }
       break;
     }
