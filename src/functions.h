@@ -1,5 +1,20 @@
 #pragma once
 
+// #define DEBUG_eHack
+
+#ifdef DEBUG_eHack
+#define DBG(...)                \
+  do                            \
+  {                             \
+    Serial.printf(__VA_ARGS__); \
+  } while (0)
+#else
+#define DBG(...) \
+  do             \
+  {              \
+  } while (0)
+#endif
+
 #include <SPI.h>
 #include <EEPROM.h>
 

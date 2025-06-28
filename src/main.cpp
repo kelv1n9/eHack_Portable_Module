@@ -2,9 +2,6 @@
 
 void setup()
 {
-  Serial.begin(115200);
-  Serial.printf("Starting %s %s\n\n", APP_NAME, APP_VERSION);
-
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
 
@@ -28,9 +25,13 @@ void setup()
   communication.setSlaveMode();
   communication.init();
 
-  Serial.printf("Current mode: %d\n\n", currentMode);
+  DBG("Current mode: %d\n\n", currentMode);
 
   currentLedMode = LED_ON;
+
+#ifdef DEBUG_eHack
+  Serial.begin(9600);
+#endif
 }
 
 void setup1()
@@ -80,7 +81,7 @@ void loop1()
 
       if (successfullyConnected && waitingForSettle)
       {
-        if (now - spectrumTimer >= 1.5*RSSI_STEP_MS)
+        if (now - spectrumTimer >= 1.5 * RSSI_STEP_MS)
         {
           currentRssi = ELECHOUSE_cc1101.getRssi();
 
@@ -257,7 +258,7 @@ void loop1()
     {
       if (!initialized)
       {
-        Serial.println("Initializing UHF All Jammer mode...");
+        DBG("Initializing UHF All Jammer mode...\n");
         initRadioAttack();
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
@@ -272,7 +273,7 @@ void loop1()
     {
       if (!initialized)
       {
-        Serial.println("Initializing UHF WiFi Jammer mode...");
+        DBG("Initializing UHF WiFi Jammer mode...\n");
         initRadioAttack();
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
@@ -287,7 +288,7 @@ void loop1()
     {
       if (!initialized)
       {
-        Serial.println("Initializing UHF Bluetooth Jammer mode...");
+        DBG("Initializing UHF Bluetooth Jammer mode...\n");
         initRadioAttack();
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
@@ -302,7 +303,7 @@ void loop1()
     {
       if (!initialized)
       {
-        Serial.println("Initializing UHF BLE Jammer mode...");
+        DBG("Initializing UHF BLE Jammer mode...\n");
         initRadioAttack();
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
@@ -317,7 +318,7 @@ void loop1()
     {
       if (!initialized)
       {
-        Serial.println("Initializing UHF USB Jammer mode...");
+        DBG("Initializing UHF USB Jammer mode...\n");
         initRadioAttack();
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
@@ -332,7 +333,7 @@ void loop1()
     {
       if (!initialized)
       {
-        Serial.println("Initializing UHF VIDEO Jammer mode...");
+        DBG("Initializing UHF VIDEO Jammer mode...\n");
         initRadioAttack();
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
@@ -347,7 +348,7 @@ void loop1()
     {
       if (!initialized)
       {
-        Serial.println("Initializing UHF RC Jammer mode...");
+        DBG("Initializing UHF RC Jammer mode...\n");
         initRadioAttack();
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
@@ -403,18 +404,18 @@ void loop()
     {
       if (recievedData[0] == 'P' && recievedData[1] == 'I' && recievedData[2] == 'N' && recievedData[3] == 'G')
       {
-        Serial.printf("Slave: PING received. Sending PONG...\n");
+        DBG("Slave: PING received. Sending PONG...\n");
         if (communication.sendPacket(pong, 32))
         {
-          Serial.printf("Slave: PONG sent successfully.\n");
-          Serial.println("Connection established");
+          DBG("Slave: PONG sent successfully.\n");
+          DBG("Connection established\n");
           successfullyConnected = true;
           currentLedMode = LED_BLINK_SLOW;
           batteryTimer = millis() - BATTERY_CHECK_INTERVAL;
         }
         else
         {
-          Serial.printf("Slave: PONG send failed.\n");
+          DBG("Slave: PONG send failed.\n");
         }
       }
     }
@@ -444,7 +445,7 @@ void loop()
         uint8_t batteryVoltagePacket[32];
         batteryTimer = millis();
         batVoltage = readBatteryVoltage();
-        Serial.printf("Battery voltage: %.2fV\n", batVoltage);
+        DBG("Battery voltage: %.2fV\n", batVoltage);
         communication.buildPacket(COMMAND_BATTERY_VOLTAGE, (uint8_t *)&batVoltage, sizeof(batVoltage), batteryVoltagePacket);
         communication.sendPacket(batteryVoltagePacket, 32);
       }
@@ -455,8 +456,8 @@ void loop()
         {
           currentMode = getModeFromPacket(recievedData, recievedDataLen);
           radioFrequency = getFrequencyFromPacket(recievedData, recievedDataLen);
-          Serial.printf("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
-          Serial.printf("Received frequency: %.2f MHz\n", radioFrequency);
+          DBG("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
+          DBG("Received frequency: %.2f MHz\n", radioFrequency);
 
           if (initialized)
           {
@@ -485,7 +486,7 @@ void loop()
         }
         else if (recievedData[0] == 'P' && recievedData[1] == 'O' && recievedData[2] == 'N' && recievedData[3] == 'G')
         {
-          Serial.printf("Slave: PONG received! Connection OK.\n");
+          DBG("Slave: PONG received! Connection OK.\n");
           currentLedMode = LED_BLINK_SLOW;
           awaitingPong = false;
           successfullyConnected = true;
@@ -494,7 +495,7 @@ void loop()
 
       if (awaitingPong && (now - pingSentTime > 1000))
       {
-        Serial.println("Connection LOST (PONG timeout)!");
+        DBG("Connection LOST (PONG timeout)!\n");
         successfullyConnected = false;
         awaitingPong = false;
       }
@@ -503,7 +504,7 @@ void loop()
       {
         if (communication.sendPacket(ping, 32))
         {
-          Serial.printf("Slave: PING sent.\n");
+          DBG("Slave: PING sent.\n");
           awaitingPong = true;
           pingSentTime = now;
           checkConnectionTimer = now;
