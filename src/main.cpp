@@ -65,12 +65,40 @@ void loop1()
     }
     case HF_SPECTRUM:
     {
+      static uint32_t spectrumTimer = 0;
+      static bool waitingForSettle = false;
+
       if (!initialized)
       {
         Serial.println("Initializing HF Spectrum mode...");
+        pinMode(GD0_PIN_CC, INPUT);
         cc1101ReadyMode();
         currentLedMode = LED_BLINK_FAST;
+        ELECHOUSE_cc1101.SetRx(raFrequencies[currentScanFreq]);
+        radio_RF24.stopListening();
+        spectrumTimer = now;
+        waitingForSettle = true;
+        currentScanFreq = 0;
         initialized = true;
+      }
+
+      if (successfullyConnected && waitingForSettle)
+      {
+        if (now - spectrumTimer >= 1.5*RSSI_STEP_MS)
+        {
+          currentRssi = ELECHOUSE_cc1101.getRssi();
+
+          int data[2];
+          data[0] = currentRssi;
+          data[1] = currentScanFreq;
+
+          radio_RF24.write(&data, sizeof(data));
+
+          currentScanFreq = (currentScanFreq + 1) % raFreqCount;
+          ELECHOUSE_cc1101.SetRx(raFrequencies[currentScanFreq]);
+          spectrumTimer = now;
+          waitingForSettle = true;
+        }
       }
 
       break;
@@ -93,7 +121,7 @@ void loop1()
       if (successfullyConnected && now - lastStepMs >= RSSI_STEP_MS)
       {
         currentRssi = ELECHOUSE_cc1101.getRssi();
-        Serial.printf("RSSI: %d\n", currentRssi);
+        radio_RF24.write(&currentRssi, sizeof(currentRssi));
         lastStepMs = now;
       }
 
@@ -428,6 +456,7 @@ void loop()
     case UHF_VIDEO_JAMMER:
     case UHF_RC_JAMMER:
     case HF_ACTIVITY:
+    case HF_SPECTRUM:
       break;
 
     default:
