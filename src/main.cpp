@@ -62,7 +62,9 @@ void loop1()
     }
     case HF_SPECTRUM:
     {
-      static uint32_t spectrumTimer = 0;
+      static uint32_t lastStepMs = millis();
+      static uint32_t lastSwitchTime = 0;
+      static bool isSending = true;
       static bool waitingForSettle = false;
 
       if (!initialized)
@@ -71,30 +73,61 @@ void loop1()
         ELECHOUSE_cc1101.SetRx(raFrequencies[currentScanFreq]);
         radio_RF24.stopListening();
         currentLedMode = LED_BLINK_FAST;
-        spectrumTimer = millis();
         waitingForSettle = true;
         currentScanFreq = 0;
         initialized = true;
       }
 
-      if (successfullyConnected && waitingForSettle)
+      if (successfullyConnected)
       {
-        if (millis() - spectrumTimer >= RSSI_STEP_MS)
+        if (isSending)
         {
-          currentRssi = ELECHOUSE_cc1101.getRssi();
+          if (millis() - lastSwitchTime < SEND_DURATION_MS)
+          {
+            if (waitingForSettle)
+            {
+              if (millis() - lastStepMs >= RSSI_STEP_MS)
+              {
+                currentRssi = ELECHOUSE_cc1101.getRssi();
 
-          int data[2];
-          data[0] = currentRssi;
-          data[1] = currentScanFreq;
+                int data[2];
+                data[0] = currentRssi;
+                data[1] = currentScanFreq;
 
-          DBG("RSSI: %d, FREQ: %d\n", currentRssi, currentScanFreq);
+                DBG("RSSI: %d, FREQ: %d\n", currentRssi, currentScanFreq);
 
-          radio_RF24.write(&data, sizeof(data));
+                radio_RF24.write(&data, sizeof(data));
 
-          currentScanFreq = (currentScanFreq + 1) % raFreqCount;
-          ELECHOUSE_cc1101.SetRx(raFrequencies[currentScanFreq]);
-          spectrumTimer = millis();
-          waitingForSettle = true;
+                currentScanFreq = (currentScanFreq + 1) % raFreqCount;
+                ELECHOUSE_cc1101.SetRx(raFrequencies[currentScanFreq]);
+                lastStepMs = millis();
+                waitingForSettle = true;
+              }
+            }
+          }
+          else
+          {
+            radio_RF24.startListening();
+            isSending = false;
+            lastSwitchTime = millis();
+          }
+        }
+        else
+        {
+          if (communication.receivePacket(recievedData, &recievedDataLen) && recievedData[0] == PROTOCOL_HEADER)
+          {
+            checkConnectionTimer = millis();
+            currentMode = getModeFromPacket(recievedData, recievedDataLen);
+            DBG("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
+            return;
+          }
+
+          if (millis() - lastSwitchTime >= LISTEN_DURATION_MS)
+          {
+            radio_RF24.stopListening();
+            isSending = true;
+            lastSwitchTime = millis();
+          }
         }
       }
 
