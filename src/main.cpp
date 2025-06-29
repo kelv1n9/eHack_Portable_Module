@@ -78,56 +78,53 @@ void loop1()
         initialized = true;
       }
 
-      if (successfullyConnected)
+      if (isSending)
       {
-        if (isSending)
+        if (millis() - lastSwitchTime < SEND_DURATION_MS)
         {
-          if (millis() - lastSwitchTime < SEND_DURATION_MS)
+          if (waitingForSettle)
           {
-            if (waitingForSettle)
+            if (millis() - lastStepMs >= RSSI_STEP_MS)
             {
-              if (millis() - lastStepMs >= RSSI_STEP_MS)
-              {
-                currentRssi = ELECHOUSE_cc1101.getRssi();
+              currentRssi = ELECHOUSE_cc1101.getRssi();
 
-                int data[2];
-                data[0] = currentRssi;
-                data[1] = currentScanFreq;
+              int data[2];
+              data[0] = currentRssi;
+              data[1] = currentScanFreq;
 
-                DBG("RSSI: %d, FREQ: %d\n", currentRssi, currentScanFreq);
+              DBG("RSSI: %d, FREQ: %d\n", currentRssi, currentScanFreq);
 
-                radio_RF24.write(&data, sizeof(data));
+              radio_RF24.write(&data, sizeof(data));
 
-                currentScanFreq = (currentScanFreq + 1) % raFreqCount;
-                ELECHOUSE_cc1101.SetRx(raFrequencies[currentScanFreq]);
-                lastStepMs = millis();
-                waitingForSettle = true;
-              }
+              currentScanFreq = (currentScanFreq + 1) % raFreqCount;
+              ELECHOUSE_cc1101.SetRx(raFrequencies[currentScanFreq]);
+              lastStepMs = millis();
+              waitingForSettle = true;
             }
-          }
-          else
-          {
-            radio_RF24.startListening();
-            isSending = false;
-            lastSwitchTime = millis();
           }
         }
         else
         {
-          if (communication.receivePacket(recievedData, &recievedDataLen) && recievedData[0] == PROTOCOL_HEADER)
-          {
-            checkConnectionTimer = millis();
-            currentMode = getModeFromPacket(recievedData, recievedDataLen);
-            DBG("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
-            return;
-          }
+          radio_RF24.startListening();
+          isSending = false;
+          lastSwitchTime = millis();
+        }
+      }
+      else
+      {
+        if (communication.receivePacket(recievedData, &recievedDataLen) && recievedData[0] == PROTOCOL_HEADER)
+        {
+          checkConnectionTimer = millis();
+          currentMode = getModeFromPacket(recievedData, recievedDataLen);
+          DBG("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
+          return;
+        }
 
-          if (millis() - lastSwitchTime >= LISTEN_DURATION_MS)
-          {
-            radio_RF24.stopListening();
-            isSending = true;
-            lastSwitchTime = millis();
-          }
+        if (millis() - lastSwitchTime >= LISTEN_DURATION_MS)
+        {
+          radio_RF24.stopListening();
+          isSending = true;
+          lastSwitchTime = millis();
         }
       }
 
@@ -148,42 +145,39 @@ void loop1()
         initialized = true;
       }
 
-      if (successfullyConnected)
+      if (isSending)
       {
-        if (isSending)
+        if (millis() - lastSwitchTime < SEND_DURATION_MS)
         {
-          if (millis() - lastSwitchTime < SEND_DURATION_MS)
+          if (millis() - lastStepMs >= RSSI_STEP_MS)
           {
-            if (millis() - lastStepMs >= RSSI_STEP_MS)
-            {
-              currentRssi = ELECHOUSE_cc1101.getRssi();
-              radio_RF24.write(&currentRssi, sizeof(currentRssi));
-              lastStepMs = millis();
-            }
-          }
-          else
-          {
-            radio_RF24.startListening();
-            isSending = false;
-            lastSwitchTime = millis();
+            currentRssi = ELECHOUSE_cc1101.getRssi();
+            radio_RF24.write(&currentRssi, sizeof(currentRssi));
+            lastStepMs = millis();
           }
         }
         else
         {
-          if (communication.receivePacket(recievedData, &recievedDataLen) && recievedData[0] == PROTOCOL_HEADER)
-          {
-            checkConnectionTimer = millis();
-            currentMode = getModeFromPacket(recievedData, recievedDataLen);
-            DBG("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
-            return;
-          }
+          radio_RF24.startListening();
+          isSending = false;
+          lastSwitchTime = millis();
+        }
+      }
+      else
+      {
+        if (communication.receivePacket(recievedData, &recievedDataLen) && recievedData[0] == PROTOCOL_HEADER)
+        {
+          checkConnectionTimer = millis();
+          currentMode = getModeFromPacket(recievedData, recievedDataLen);
+          DBG("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
+          return;
+        }
 
-          if (millis() - lastSwitchTime >= LISTEN_DURATION_MS)
-          {
-            radio_RF24.stopListening();
-            isSending = true;
-            lastSwitchTime = millis();
-          }
+        if (millis() - lastSwitchTime >= LISTEN_DURATION_MS)
+        {
+          radio_RF24.stopListening();
+          isSending = true;
+          lastSwitchTime = millis();
         }
       }
 
@@ -319,6 +313,9 @@ void loop1()
     // Handle UHF modes
     case UHF_ALL_JAMMER:
     {
+      static uint32_t lastSwitchTime = 0;
+      static bool isSending = true;
+
       if (!initialized)
       {
         DBG("Initializing UHF All Jammer mode...\n");
@@ -326,13 +323,49 @@ void loop1()
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
       }
-      int randomIndex = random(0, sizeof(full_channels) / sizeof(full_channels[0]));
-      radioChannel = full_channels[randomIndex];
-      radio_RF24.setChannel(radioChannel);
+
+      if (isSending)
+      {
+        if (millis() - lastSwitchTime < 5 * SEND_DURATION_MS)
+        {
+          int randomIndex = random(0, sizeof(full_channels) / sizeof(full_channels[0]));
+          radioChannel = full_channels[randomIndex];
+          radio_RF24.setChannel(radioChannel);
+        }
+        else
+        {
+          stopRadioAttack();
+          communication.setSlaveMode();
+          communication.init();
+          isSending = false;
+          lastSwitchTime = millis();
+        }
+      }
+      else
+      {
+        if (communication.receivePacket(recievedData, &recievedDataLen) && recievedData[0] == PROTOCOL_HEADER)
+        {
+          checkConnectionTimer = millis();
+          currentMode = getModeFromPacket(recievedData, recievedDataLen);
+          DBG("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
+          return;
+        }
+
+        if (millis() - lastSwitchTime >= LISTEN_DURATION_MS)
+        {
+          initRadioAttack();
+          isSending = true;
+          lastSwitchTime = millis();
+        }
+      }
+
       break;
     }
     case UHF_WIFI_JAMMER:
     {
+      static uint32_t lastSwitchTime = 0;
+      static bool isSending = true;
+
       if (!initialized)
       {
         DBG("Initializing UHF WiFi Jammer mode...\n");
@@ -340,13 +373,49 @@ void loop1()
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
       }
-      int randomIndex = random(0, sizeof(wifi_channels) / sizeof(wifi_channels[0]));
-      radioChannel = wifi_channels[randomIndex];
-      radio_RF24.setChannel(radioChannel);
+
+      if (isSending)
+      {
+        if (millis() - lastSwitchTime < 5 * SEND_DURATION_MS)
+        {
+          int randomIndex = random(0, sizeof(wifi_channels) / sizeof(wifi_channels[0]));
+          radioChannel = wifi_channels[randomIndex];
+          radio_RF24.setChannel(radioChannel);
+        }
+        else
+        {
+          stopRadioAttack();
+          communication.setSlaveMode();
+          communication.init();
+          isSending = false;
+          lastSwitchTime = millis();
+        }
+      }
+      else
+      {
+        if (communication.receivePacket(recievedData, &recievedDataLen) && recievedData[0] == PROTOCOL_HEADER)
+        {
+          checkConnectionTimer = millis();
+          currentMode = getModeFromPacket(recievedData, recievedDataLen);
+          DBG("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
+          return;
+        }
+
+        if (millis() - lastSwitchTime >= LISTEN_DURATION_MS)
+        {
+          initRadioAttack();
+          isSending = true;
+          lastSwitchTime = millis();
+        }
+      }
+
       break;
     }
     case UHF_BT_JAMMER:
     {
+      static uint32_t lastSwitchTime = 0;
+      static bool isSending = true;
+
       if (!initialized)
       {
         DBG("Initializing UHF Bluetooth Jammer mode...\n");
@@ -354,13 +423,49 @@ void loop1()
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
       }
-      int randomIndex = random(0, sizeof(bluetooth_channels) / sizeof(bluetooth_channels[0]));
-      radioChannel = bluetooth_channels[randomIndex];
-      radio_RF24.setChannel(radioChannel);
+
+      if (isSending)
+      {
+        if (millis() - lastSwitchTime < 5 * SEND_DURATION_MS)
+        {
+          int randomIndex = random(0, sizeof(bluetooth_channels) / sizeof(bluetooth_channels[0]));
+          radioChannel = bluetooth_channels[randomIndex];
+          radio_RF24.setChannel(radioChannel);
+        }
+        else
+        {
+          stopRadioAttack();
+          communication.setSlaveMode();
+          communication.init();
+          isSending = false;
+          lastSwitchTime = millis();
+        }
+      }
+      else
+      {
+        if (communication.receivePacket(recievedData, &recievedDataLen) && recievedData[0] == PROTOCOL_HEADER)
+        {
+          checkConnectionTimer = millis();
+          currentMode = getModeFromPacket(recievedData, recievedDataLen);
+          DBG("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
+          return;
+        }
+
+        if (millis() - lastSwitchTime >= LISTEN_DURATION_MS)
+        {
+          initRadioAttack();
+          isSending = true;
+          lastSwitchTime = millis();
+        }
+      }
+
       break;
     }
     case UHF_BLE_JAMMER:
     {
+      static uint32_t lastSwitchTime = 0;
+      static bool isSending = true;
+
       if (!initialized)
       {
         DBG("Initializing UHF BLE Jammer mode...\n");
@@ -368,13 +473,49 @@ void loop1()
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
       }
-      int randomIndex = random(0, sizeof(ble_channels) / sizeof(ble_channels[0]));
-      radioChannel = ble_channels[randomIndex];
-      radio_RF24.setChannel(radioChannel);
+
+      if (isSending)
+      {
+        if (millis() - lastSwitchTime < 5 * SEND_DURATION_MS)
+        {
+          int randomIndex = random(0, sizeof(ble_channels) / sizeof(ble_channels[0]));
+          radioChannel = ble_channels[randomIndex];
+          radio_RF24.setChannel(radioChannel);
+        }
+        else
+        {
+          stopRadioAttack();
+          communication.setSlaveMode();
+          communication.init();
+          isSending = false;
+          lastSwitchTime = millis();
+        }
+      }
+      else
+      {
+        if (communication.receivePacket(recievedData, &recievedDataLen) && recievedData[0] == PROTOCOL_HEADER)
+        {
+          checkConnectionTimer = millis();
+          currentMode = getModeFromPacket(recievedData, recievedDataLen);
+          DBG("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
+          return;
+        }
+
+        if (millis() - lastSwitchTime >= LISTEN_DURATION_MS)
+        {
+          initRadioAttack();
+          isSending = true;
+          lastSwitchTime = millis();
+        }
+      }
+
       break;
     }
     case UHF_USB_JAMMER:
     {
+      static uint32_t lastSwitchTime = 0;
+      static bool isSending = true;
+
       if (!initialized)
       {
         DBG("Initializing UHF USB Jammer mode...\n");
@@ -382,13 +523,49 @@ void loop1()
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
       }
-      int randomIndex = random(0, sizeof(usb_channels) / sizeof(usb_channels[0]));
-      radioChannel = usb_channels[randomIndex];
-      radio_RF24.setChannel(radioChannel);
+
+      if (isSending)
+      {
+        if (millis() - lastSwitchTime < 5 * SEND_DURATION_MS)
+        {
+          int randomIndex = random(0, sizeof(usb_channels) / sizeof(usb_channels[0]));
+          radioChannel = usb_channels[randomIndex];
+          radio_RF24.setChannel(radioChannel);
+        }
+        else
+        {
+          stopRadioAttack();
+          communication.setSlaveMode();
+          communication.init();
+          isSending = false;
+          lastSwitchTime = millis();
+        }
+      }
+      else
+      {
+        if (communication.receivePacket(recievedData, &recievedDataLen) && recievedData[0] == PROTOCOL_HEADER)
+        {
+          checkConnectionTimer = millis();
+          currentMode = getModeFromPacket(recievedData, recievedDataLen);
+          DBG("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
+          return;
+        }
+
+        if (millis() - lastSwitchTime >= LISTEN_DURATION_MS)
+        {
+          initRadioAttack();
+          isSending = true;
+          lastSwitchTime = millis();
+        }
+      }
+
       break;
     }
     case UHF_VIDEO_JAMMER:
     {
+      static uint32_t lastSwitchTime = 0;
+      static bool isSending = true;
+
       if (!initialized)
       {
         DBG("Initializing UHF VIDEO Jammer mode...\n");
@@ -396,13 +573,49 @@ void loop1()
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
       }
-      int randomIndex = random(0, sizeof(video_channels) / sizeof(video_channels[0]));
-      radioChannel = video_channels[randomIndex];
-      radio_RF24.setChannel(radioChannel);
+
+      if (isSending)
+      {
+        if (millis() - lastSwitchTime < 5 * SEND_DURATION_MS)
+        {
+          int randomIndex = random(0, sizeof(video_channels) / sizeof(video_channels[0]));
+          radioChannel = video_channels[randomIndex];
+          radio_RF24.setChannel(radioChannel);
+        }
+        else
+        {
+          stopRadioAttack();
+          communication.setSlaveMode();
+          communication.init();
+          isSending = false;
+          lastSwitchTime = millis();
+        }
+      }
+      else
+      {
+        if (communication.receivePacket(recievedData, &recievedDataLen) && recievedData[0] == PROTOCOL_HEADER)
+        {
+          checkConnectionTimer = millis();
+          currentMode = getModeFromPacket(recievedData, recievedDataLen);
+          DBG("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
+          return;
+        }
+
+        if (millis() - lastSwitchTime >= LISTEN_DURATION_MS)
+        {
+          initRadioAttack();
+          isSending = true;
+          lastSwitchTime = millis();
+        }
+      }
+
       break;
     }
     case UHF_RC_JAMMER:
     {
+      static uint32_t lastSwitchTime = 0;
+      static bool isSending = true;
+
       if (!initialized)
       {
         DBG("Initializing UHF RC Jammer mode...\n");
@@ -410,9 +623,42 @@ void loop1()
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
       }
-      int randomIndex = random(0, sizeof(rc_channels) / sizeof(rc_channels[0]));
-      radioChannel = rc_channels[randomIndex];
-      radio_RF24.setChannel(radioChannel);
+
+      if (isSending)
+      {
+        if (millis() - lastSwitchTime < 5 * SEND_DURATION_MS)
+        {
+          int randomIndex = random(0, sizeof(rc_channels) / sizeof(rc_channels[0]));
+          radioChannel = rc_channels[randomIndex];
+          radio_RF24.setChannel(radioChannel);
+        }
+        else
+        {
+          stopRadioAttack();
+          communication.setSlaveMode();
+          communication.init();
+          isSending = false;
+          lastSwitchTime = millis();
+        }
+      }
+      else
+      {
+        if (communication.receivePacket(recievedData, &recievedDataLen) && recievedData[0] == PROTOCOL_HEADER)
+        {
+          checkConnectionTimer = millis();
+          currentMode = getModeFromPacket(recievedData, recievedDataLen);
+          DBG("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
+          return;
+        }
+
+        if (millis() - lastSwitchTime >= LISTEN_DURATION_MS)
+        {
+          initRadioAttack();
+          isSending = true;
+          lastSwitchTime = millis();
+        }
+      }
+
       break;
     }
     }
@@ -438,8 +684,8 @@ void loop()
     offTime = 500;
     break;
   case LED_BLINK_FAST:
-    onTime = 100;
-    offTime = 800;
+    onTime = 50;
+    offTime = 500;
     break;
   }
 
