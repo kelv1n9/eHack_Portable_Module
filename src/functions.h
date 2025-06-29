@@ -156,6 +156,9 @@ uint8_t radioChannel = 0;
 #define CONNECTION_DELAY 5000
 #define NUMBER_OF_RETRIES 3
 
+#define SEND_DURATION_MS 200
+#define LISTEN_DURATION_MS 20
+
 byte ping[4] = {'P', 'I', 'N', 'G'};
 byte pong[4] = {'P', 'O', 'N', 'G'};
 byte inited[4] = {'I', 'N', 'I', 'T'};

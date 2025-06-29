@@ -103,6 +103,8 @@ void loop1()
     case HF_ACTIVITY:
     {
       static uint32_t lastStepMs = millis();
+      static uint32_t lastSwitchTime = 0;
+      static bool isSending = true;
 
       if (!initialized)
       {
@@ -113,11 +115,43 @@ void loop1()
         initialized = true;
       }
 
-      if (successfullyConnected && millis() - lastStepMs >= RSSI_STEP_MS)
+      if (successfullyConnected)
       {
-        currentRssi = ELECHOUSE_cc1101.getRssi();
-        radio_RF24.write(&currentRssi, sizeof(currentRssi));
-        lastStepMs = millis();
+        if (isSending)
+        {
+          if (millis() - lastSwitchTime < SEND_DURATION_MS)
+          {
+            if (millis() - lastStepMs >= RSSI_STEP_MS)
+            {
+              currentRssi = ELECHOUSE_cc1101.getRssi();
+              radio_RF24.write(&currentRssi, sizeof(currentRssi));
+              lastStepMs = millis();
+            }
+          }
+          else
+          {
+            radio_RF24.startListening();
+            isSending = false;
+            lastSwitchTime = millis();
+          }
+        }
+        else
+        {
+          if (communication.receivePacket(recievedData, &recievedDataLen) && recievedData[0] == PROTOCOL_HEADER)
+          {
+            checkConnectionTimer = millis();
+            currentMode = getModeFromPacket(recievedData, recievedDataLen);
+            DBG("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
+            return;
+          }
+
+          if (millis() - lastSwitchTime >= LISTEN_DURATION_MS)
+          {
+            radio_RF24.stopListening();
+            isSending = true;
+            lastSwitchTime = millis();
+          }
+        }
       }
 
       break;
