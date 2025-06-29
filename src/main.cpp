@@ -139,7 +139,7 @@ void loop1()
       if (!initialized)
       {
         pinMode(GD0_PIN_CC, INPUT);
-        ELECHOUSE_cc1101.SetRx(raFrequencies[currentFreqIndex]);
+        ELECHOUSE_cc1101.SetRx(radioFrequency);
         radio_RF24.stopListening();
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
@@ -152,6 +152,7 @@ void loop1()
           if (millis() - lastStepMs >= RSSI_STEP_MS)
           {
             currentRssi = ELECHOUSE_cc1101.getRssi();
+            DBG("RSSI: %d, FREQ: %.2f\n", currentRssi, radioFrequency);
             radio_RF24.write(&currentRssi, sizeof(currentRssi));
             lastStepMs = millis();
           }
@@ -169,7 +170,10 @@ void loop1()
         {
           checkConnectionTimer = millis();
           currentMode = getModeFromPacket(recievedData, recievedDataLen);
+          radioFrequency = getFrequencyFromPacket(recievedData, recievedDataLen);
           DBG("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
+          DBG("Received frequency: %.2f MHz\n", radioFrequency);
+          initialized = false;
           return;
         }
 
