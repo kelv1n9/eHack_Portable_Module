@@ -514,16 +514,32 @@ void loop()
           DBG("Received frequency: %.2f MHz\n", radioFrequency);
           initializedIdle = false;
 
+          switch (currentMode)
+          {
+          case UHF_SPECTRUM:
+          case UHF_ALL_JAMMER:
+          case UHF_WIFI_JAMMER:
+          case UHF_BT_JAMMER:
+          case UHF_BLE_JAMMER:
+          case UHF_USB_JAMMER:
+          case UHF_VIDEO_JAMMER:
+          case UHF_RC_JAMMER:
+            DBG("Returned\n");
+            return;
+          }
+
           if (initialized)
           {
             switch (currentMode)
             {
             case HF_SCAN:
               ELECHOUSE_cc1101.SetRx(radioFrequency);
+              DBG("Setted RX Freq\n");
               break;
             case HF_REPLAY:
             case HF_JAMMER:
               ELECHOUSE_cc1101.SetTx(radioFrequency);
+              DBG("Setted TX Freq\n");
               break;
             }
           }
@@ -531,6 +547,7 @@ void loop()
           if (currentMode != IDLE)
           {
             communication.sendPacket(inited, 32);
+            DBG("Init was sent\n");
           }
         }
         else if (recievedData[0] == 'P' && recievedData[1] == 'I' && recievedData[2] == 'N' && recievedData[3] == 'G')
