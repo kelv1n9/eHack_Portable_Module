@@ -217,6 +217,8 @@ void loop1()
         mySwitch.setRepeatTransmit(10);
         mySwitch.setPulseLength(mySwitch.getReceivedDelay());
         mySwitch.send(mySwitch.getReceivedValue(), mySwitch.getReceivedBitlength());
+        DBG("Successfully sent!\n");
+        DBG("Code: %d, Protocol: %d\n", mySwitch.getReceivedValue(), mySwitch.getReceivedProtocol());
 
         mySwitch.resetAvailable();
         initialized = false;
@@ -262,6 +264,8 @@ void loop1()
       {
         mySwitch.send(mySwitch.getReceivedValue(), mySwitch.getReceivedBitlength());
         attackTimer = millis();
+        DBG("Successfully sent!\n");
+        DBG("Code: %d, Protocol: %d\n", mySwitch.getReceivedValue(), mySwitch.getReceivedProtocol());
       }
 
       break;
@@ -305,6 +309,8 @@ void loop1()
       float freq = toggleFreq ? 315.0 : 433.92;
       ELECHOUSE_cc1101.SetTx(freq);
       toggleFreq = !toggleFreq;
+
+      DBG("Tesla Freq: %.2f\n", freq);
 
       sendTeslaSignal_v1();
       delay(50);
@@ -794,11 +800,11 @@ void loop()
             }
           }
 
-          if (currentMode != IDLE)
-          {
-            communication.sendPacket(inited, 32);
-            DBG("Init was sent\n");
-          }
+          // if (currentMode != IDLE)
+          // {
+          //   communication.sendPacket(inited, 32);
+          //   DBG("Init was sent\n");
+          // }
         }
         else if (recievedData[0] == 'P' && recievedData[1] == 'I' && recievedData[2] == 'N' && recievedData[3] == 'G')
         {
@@ -822,4 +828,13 @@ void loop()
     }
     }
   }
+
+#ifdef DEBUG_eHack
+  static uint32_t timer;
+  if (millis() - timer > 1000)
+  {
+    DBG("Current menu: %d\n", currentMode);
+    timer = millis();
+  }
+#endif
 }
