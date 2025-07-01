@@ -949,6 +949,8 @@ void loop()
             case HF_REPLAY:
             case HF_JAMMER:
             case HF_BARRIER_REPLAY:
+            case HF_BARRIER_BRUTE_NICE:
+            case HF_BARRIER_BRUTE_CAME:
               ELECHOUSE_cc1101.SetTx(radioFrequency);
               DBG("Setted TX Freq\n");
               break;
