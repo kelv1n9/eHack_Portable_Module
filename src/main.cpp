@@ -284,9 +284,8 @@ void loop1()
 
       if (barrierCaptured)
       {
-        barrierCaptured = false;
-
         // Repeating the signal
+        detachInterrupt(GD0_PIN_CC);
         pinMode(GD0_PIN_CC, OUTPUT);
         ELECHOUSE_cc1101.SetTx(radioFrequency);
 
@@ -306,6 +305,7 @@ void loop1()
         DBG("Successfully sent!\n");
         DBG("Code: %d, Protocol: %d\n", barrierCodeMain, barrierProtocol);
 
+        barrierCaptured = false;
         initialized = false;
       }
 
@@ -329,8 +329,8 @@ void loop1()
         barrierCaptured = false;
 
         // Repeating the signal
-        pinMode(GD0_PIN_CC, OUTPUT);
         detachInterrupt(GD0_PIN_CC);
+        pinMode(GD0_PIN_CC, OUTPUT);
         ELECHOUSE_cc1101.SetTx(radioFrequency);
 
         attackIsActive = true;
@@ -361,16 +361,16 @@ void loop1()
     }
     case HF_BARRIER_BRUTE_CAME:
     {
+      static uint32_t lastSendTime = millis();
+
       if (!initialized)
       {
         pinMode(GD0_PIN_CC, OUTPUT);
         ELECHOUSE_cc1101.SetTx(radioFrequency);
         currentLedMode = LED_BLINK_FAST;
+        barrierBruteIndex = 4095;
         initialized = true;
       }
-
-      static int16_t barrierBruteIndex = 4095;
-      static uint32_t lastSendTime = millis();
 
       if (millis() - lastSendTime > 50)
       {
@@ -393,16 +393,16 @@ void loop1()
     }
     case HF_BARRIER_BRUTE_NICE:
     {
+      static uint32_t lastSendTime = millis();
+      
       if (!initialized)
       {
         pinMode(GD0_PIN_CC, OUTPUT);
         ELECHOUSE_cc1101.SetTx(radioFrequency);
         currentLedMode = LED_BLINK_FAST;
+        barrierBruteIndex = 4095;
         initialized = true;
       }
-
-      static int16_t barrierBruteIndex = 4095;
-      static uint32_t lastSendTime = millis();
 
       if (millis() - lastSendTime > 50)
       {
@@ -428,7 +428,7 @@ void loop1()
       if (!initialized)
       {
         pinMode(GD0_PIN_CC, OUTPUT);
-        ELECHOUSE_cc1101.SetTx(raFrequencies[1]);
+        ELECHOUSE_cc1101.SetTx(radioFrequency);
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
       }
@@ -436,8 +436,6 @@ void loop1()
       static uint32_t lastNoise = 0;
       static bool noiseState = false;
       uint32_t nowMicros = micros();
-
-      // changeFreqButtons("TX");
 
       if (nowMicros - lastNoise > 500)
       {
@@ -453,7 +451,7 @@ void loop1()
       if (!initialized)
       {
         pinMode(GD0_PIN_CC, OUTPUT);
-        ELECHOUSE_cc1101.SetTx(raFrequencies[1]);
+        ELECHOUSE_cc1101.SetTx(radioFrequency);
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
       }
