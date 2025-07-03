@@ -28,6 +28,10 @@
 #define APP_NAME "eHack Portable"
 #define APP_VERSION "v1.0.0"
 
+#define DISABLE_DEVICE_PIN 28
+#define DISABLE_DEVICE_DELAY 180000 // ms
+static uint32_t offTimer;
+
 // Modes
 enum Mode
 {
