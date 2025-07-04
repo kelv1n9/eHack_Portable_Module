@@ -2,6 +2,9 @@
 
 void setup()
 {
+  pinMode(DISABLE_DEVICE_PIN, OUTPUT);
+  digitalWrite(DISABLE_DEVICE_PIN, LOW);
+
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
 
@@ -284,9 +287,8 @@ void loop1()
 
       if (barrierCaptured)
       {
-        barrierCaptured = false;
-
         // Repeating the signal
+        detachInterrupt(GD0_PIN_CC);
         pinMode(GD0_PIN_CC, OUTPUT);
         ELECHOUSE_cc1101.SetTx(radioFrequency);
 
@@ -306,6 +308,7 @@ void loop1()
         DBG("Successfully sent!\n");
         DBG("Code: %d, Protocol: %d\n", barrierCodeMain, barrierProtocol);
 
+        barrierCaptured = false;
         initialized = false;
       }
 
@@ -329,8 +332,8 @@ void loop1()
         barrierCaptured = false;
 
         // Repeating the signal
-        pinMode(GD0_PIN_CC, OUTPUT);
         detachInterrupt(GD0_PIN_CC);
+        pinMode(GD0_PIN_CC, OUTPUT);
         ELECHOUSE_cc1101.SetTx(radioFrequency);
 
         attackIsActive = true;
@@ -361,16 +364,16 @@ void loop1()
     }
     case HF_BARRIER_BRUTE_CAME:
     {
+      static uint32_t lastSendTime = millis();
+
       if (!initialized)
       {
         pinMode(GD0_PIN_CC, OUTPUT);
         ELECHOUSE_cc1101.SetTx(radioFrequency);
         currentLedMode = LED_BLINK_FAST;
+        barrierBruteIndex = 4095;
         initialized = true;
       }
-
-      static int16_t barrierBruteIndex = 4095;
-      static uint32_t lastSendTime = millis();
 
       if (millis() - lastSendTime > 50)
       {
@@ -393,16 +396,16 @@ void loop1()
     }
     case HF_BARRIER_BRUTE_NICE:
     {
+      static uint32_t lastSendTime = millis();
+
       if (!initialized)
       {
         pinMode(GD0_PIN_CC, OUTPUT);
         ELECHOUSE_cc1101.SetTx(radioFrequency);
         currentLedMode = LED_BLINK_FAST;
+        barrierBruteIndex = 4095;
         initialized = true;
       }
-
-      static int16_t barrierBruteIndex = 4095;
-      static uint32_t lastSendTime = millis();
 
       if (millis() - lastSendTime > 50)
       {
@@ -428,7 +431,7 @@ void loop1()
       if (!initialized)
       {
         pinMode(GD0_PIN_CC, OUTPUT);
-        ELECHOUSE_cc1101.SetTx(raFrequencies[1]);
+        ELECHOUSE_cc1101.SetTx(radioFrequency);
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
       }
@@ -436,8 +439,6 @@ void loop1()
       static uint32_t lastNoise = 0;
       static bool noiseState = false;
       uint32_t nowMicros = micros();
-
-      // changeFreqButtons("TX");
 
       if (nowMicros - lastNoise > 500)
       {
@@ -453,7 +454,7 @@ void loop1()
       if (!initialized)
       {
         pinMode(GD0_PIN_CC, OUTPUT);
-        ELECHOUSE_cc1101.SetTx(raFrequencies[1]);
+        ELECHOUSE_cc1101.SetTx(radioFrequency);
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
       }
@@ -866,6 +867,13 @@ void loop()
   {
     currentLedMode = LED_ON;
 
+    if (millis() - offTimer > DISABLE_DEVICE_DELAY)
+    {
+      DBG("Going to sleep...: %d\n", currentMode);
+      digitalWrite(DISABLE_DEVICE_PIN, HIGH);
+      delay(1000);
+    }
+
     if (communication.receivePacket(recievedData, &recievedDataLen))
     {
       if (recievedData[0] == 'P' && recievedData[1] == 'I' && recievedData[2] == 'N' && recievedData[3] == 'G')
@@ -909,6 +917,7 @@ void loop()
       {
         DBG("Slave: Connection LOST (Master timeout)!\n");
         successfullyConnected = false;
+        offTimer = millis();
         return;
       }
 
