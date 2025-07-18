@@ -981,6 +981,13 @@ void loop()
             DBG("Master: PONG sent! Connection OK.\n");
           }
         }
+        else if (recievedData[0] == 'O' && recievedData[1] == 'F' && recievedData[2] == 'F')
+        {
+          DBG("Master: OFF received!\n");
+          DBG("Going to sleep...\n");
+          digitalWrite(DISABLE_DEVICE_PIN, HIGH);
+          delay(1000);
+        }
       }
       if (millis() - batteryTimer > BATTERY_CHECK_INTERVAL)
       {
