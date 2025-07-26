@@ -66,6 +66,7 @@ void loop1()
     }
     case HF_SPECTRUM:
     {
+      static uint8_t sendFailCount = 0;
       static uint32_t lastStepMs = millis();
       static uint32_t lastSwitchTime = 0;
       static bool isSending = true;
@@ -98,12 +99,30 @@ void loop1()
 
               DBG("RSSI: %d, FREQ: %d\n", currentRssi, currentScanFreq);
 
-              radio_RF24.write(&data, sizeof(data));
+              bool success = radio_RF24.write(&data, sizeof(data));
 
               currentScanFreq = (currentScanFreq + 1) % raFreqCount;
               ELECHOUSE_cc1101.SetRx(raFrequencies[currentScanFreq]);
               lastStepMs = millis();
               waitingForSettle = true;
+
+              if (!success)
+              {
+                sendFailCount++;
+                if (sendFailCount >= 5)
+                {
+                  radio_RF24.startListening();
+                  currentMode = IDLE;
+                  initialized = false;
+                  sendFailCount = 0;
+                  DBG("Failed to send data, switching to IDLE mode.\n");
+                  return;
+                }
+              }
+              else
+              {
+                sendFailCount = 0;
+              }
             }
           }
         }
@@ -136,6 +155,7 @@ void loop1()
     }
     case HF_ACTIVITY:
     {
+      static uint8_t sendFailCount = 0;
       static uint32_t lastStepMs = millis();
       static uint32_t lastSwitchTime = 0;
       static bool isSending = true;
@@ -157,8 +177,25 @@ void loop1()
           {
             currentRssi = ELECHOUSE_cc1101.getRssi();
             DBG("RSSI: %d, FREQ: %.2f\n", currentRssi, radioFrequency);
-            radio_RF24.write(&currentRssi, sizeof(currentRssi));
+            bool success = radio_RF24.write(&currentRssi, sizeof(currentRssi));
             lastStepMs = millis();
+            if (!success)
+            {
+              sendFailCount++;
+              if (sendFailCount >= 5)
+              {
+                radio_RF24.startListening();
+                currentMode = IDLE;
+                initialized = false;
+                sendFailCount = 0;
+                DBG("Failed to send data, switching to IDLE mode.\n");
+                return;
+              }
+            }
+            else
+            {
+              sendFailCount = 0;
+            }
           }
         }
         else
