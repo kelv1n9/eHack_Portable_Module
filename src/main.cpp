@@ -163,6 +163,7 @@ void loop1()
       if (!initialized)
       {
         pinMode(GD0_PIN_CC, INPUT);
+        mySwitch.enableReceive(GD0_PIN_CC);
         ELECHOUSE_cc1101.SetRx(radioFrequency);
         radio_RF24.stopListening();
         currentLedMode = LED_BLINK_FAST;
@@ -216,6 +217,30 @@ void loop1()
           DBG("Received frequency: %.2f MHz\n", radioFrequency);
           initialized = false;
           return;
+        }
+
+        if (mySwitch.available())
+        {
+          if (mySwitch.getReceivedBitlength() < 10)
+          {
+            mySwitch.resetAvailable();
+            break;
+          }
+
+          mySwitch.disableReceive();
+          mySwitch.enableTransmit(GD0_PIN_CC);
+          pinMode(GD0_PIN_CC, OUTPUT);
+          ELECHOUSE_cc1101.SetTx(radioFrequency);
+
+          mySwitch.setProtocol(mySwitch.getReceivedProtocol());
+          mySwitch.setRepeatTransmit(10);
+          mySwitch.setPulseLength(mySwitch.getReceivedDelay());
+          mySwitch.send(mySwitch.getReceivedValue(), mySwitch.getReceivedBitlength());
+          DBG("Successfully sent!\n");
+          DBG("Code: %d, Protocol: %d\n", mySwitch.getReceivedValue(), mySwitch.getReceivedProtocol());
+
+          mySwitch.resetAvailable();
+          initialized = false;
         }
 
         if (millis() - lastSwitchTime >= LISTEN_DURATION_MS)
