@@ -99,6 +99,18 @@ uint32_t batteryTimer;
 #define RSSI_WINDOW_MS 100
 #define RSSI_STEP_MS 50
 #define RSSI_BUFFER_SIZE 90
+#define MAX_STORED_SIGNALS 16
+
+struct SimpleRAData
+{
+  uint32_t code;
+  uint16_t length;
+  uint16_t protocol;
+  uint16_t delay;
+};
+
+SimpleRAData StoredSubSignals[MAX_STORED_SIGNALS];
+uint8_t receivedSignals;
 
 const byte GD0_PIN_CC = 6;
 
