@@ -223,6 +223,14 @@ uint8_t recievedDataLen = 0;
 
 uint8_t batteryVoltagePacket[32];
 
+// ================== Serial ===========================/
+
+bool manualReplay = false;
+unsigned long manualCode = 0;
+unsigned int manualProtocol = 1;
+unsigned int manualBitLength = 24;
+unsigned int manualDelay = 350;
+
 /*=================== FUNCTIONS ==========================*/
 /*********************** COMMON ***************************/
 
@@ -726,4 +734,49 @@ void stopRadioAttack()
 {
   radio_RF24.stopConstCarrier();
   radio_RF24.powerDown();
+}
+
+/* ============================ SERIAL ================================= */
+
+void handleSerialCommand()
+{
+  // Format: REPLAY code protocol [bits] [delay]
+  // Examples:
+  // REPLAY 123456 1
+  // REPLAY 123456 1 24 350
+
+  if (!Serial.available())
+    return;
+
+  String line = Serial.readStringUntil('\n');
+  line.trim();
+  if (line.length() == 0)
+    return;
+
+  if (line.startsWith("REPLAY"))
+  {
+    long code;
+    int proto;
+    int bits = 24;
+    int dly = 350;
+
+    int parsed = sscanf(line.c_str(), "REPLAY %ld %d %d %d", &code, &proto, &bits, &dly);
+    if (parsed >= 2)
+    {
+      manualCode = (unsigned long)code;
+      manualProtocol = (unsigned int)proto;
+      if (parsed >= 3)
+        manualBitLength = (unsigned int)bits;
+      if (parsed >= 4)
+        manualDelay = (unsigned int)dly;
+
+      manualReplay = true;
+
+      currentMode = HF_REPLAY;
+      initialized = false;
+
+      Serial.printf("Manual HF_REPLAY: code=%lu proto=%u bits=%u delay=%u\n",
+                    manualCode, manualProtocol, manualBitLength, manualDelay);
+    }
+  }
 }

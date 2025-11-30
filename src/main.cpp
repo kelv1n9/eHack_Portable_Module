@@ -32,9 +32,7 @@ void setup()
 
   currentLedMode = LED_ON;
 
-#ifdef DEBUG_eHack
   Serial.begin(9600);
-#endif
 }
 
 void setup1()
@@ -44,7 +42,9 @@ void setup1()
 // Loop for common tasks
 void loop1()
 {
-  if (successfullyConnected || currentMode == HF_SCAN)
+  handleSerialCommand();
+
+  if (successfullyConnected || currentMode == HF_SCAN || manualReplay)
   {
     switch (currentMode)
     {
@@ -369,6 +369,25 @@ void loop1()
         ELECHOUSE_cc1101.SetRx(radioFrequency);
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
+      }
+
+      if (manualReplay)
+      {
+        mySwitch.disableReceive();
+        mySwitch.enableTransmit(GD0_PIN_CC);
+        pinMode(GD0_PIN_CC, OUTPUT);
+        ELECHOUSE_cc1101.SetTx(radioFrequency);
+
+        mySwitch.setProtocol(manualProtocol);
+        mySwitch.setRepeatTransmit(10);
+        mySwitch.setPulseLength(manualDelay);
+
+        mySwitch.send(manualCode, manualBitLength);
+
+        initialized = false;
+        manualReplay = false;
+
+        break;
       }
 
       if (!attackIsActive && mySwitch.available())
@@ -995,7 +1014,7 @@ void loop()
   {
     currentLedMode = LED_ON;
 
-    if (millis() - offTimer > DISABLE_DEVICE_DELAY && currentMode != HF_SCAN)
+    if (millis() - offTimer > DISABLE_DEVICE_DELAY && currentMode != HF_SCAN && !Serial.available())
     {
       DBG("Going to sleep...: %d\n", currentMode);
       digitalWrite(DISABLE_DEVICE_PIN, HIGH);
