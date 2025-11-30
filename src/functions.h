@@ -26,7 +26,7 @@
 #include "RF24.h"
 
 #define APP_NAME "eHack Portable"
-#define APP_VERSION "v1.1.1"
+#define APP_VERSION "v1.2.0"
 
 #define DISABLE_DEVICE_PIN 28
 #define DISABLE_DEVICE_DELAY 180000 // ms
