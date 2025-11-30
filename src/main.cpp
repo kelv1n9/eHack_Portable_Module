@@ -281,7 +281,7 @@ void loop1()
           mySwitch.send(StoredSubSignals[i].code, StoredSubSignals[i].length);
           delay(1000);
         }
-        
+
         receivedSignals = 0;
         initialized = false;
         DBG("Successfully sent all buffer data!\n");
@@ -995,7 +995,7 @@ void loop()
   {
     currentLedMode = LED_ON;
 
-    if (millis() - offTimer > DISABLE_DEVICE_DELAY)
+    if (millis() - offTimer > DISABLE_DEVICE_DELAY && currentMode != HF_SCAN)
     {
       DBG("Going to sleep...: %d\n", currentMode);
       digitalWrite(DISABLE_DEVICE_PIN, HIGH);
