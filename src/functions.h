@@ -1,6 +1,6 @@
 #pragma once
 
-// #define DEBUG_eHack
+#define DEBUG_eHack
 
 #ifdef DEBUG_eHack
 #define DBG(...)                \
@@ -99,7 +99,6 @@ uint32_t batteryTimer;
 #define RSSI_WINDOW_MS 100
 #define RSSI_STEP_MS 50
 #define RSSI_BUFFER_SIZE 90
-#define MAX_STORED_SIGNALS 16
 
 struct SimpleRAData
 {
@@ -109,7 +108,6 @@ struct SimpleRAData
   uint16_t delay;
 };
 
-SimpleRAData StoredSubSignals[MAX_STORED_SIGNALS];
 uint8_t receivedSignals;
 
 const byte GD0_PIN_CC = 6;
@@ -130,10 +128,10 @@ RCSwitch mySwitch = RCSwitch();
 uint8_t lastUsedSlotRA = 0;
 uint8_t selectedSlotRA = 0;
 
-uint32_t capturedCode;
-uint16_t capturedLength;
-uint16_t capturedProtocol;
-uint16_t capturedDelay;
+// uint32_t capturedCode;
+// uint16_t capturedLength;
+// uint16_t capturedProtocol;
+// uint16_t capturedDelay;
 
 float radioFrequency = raFrequencies[1];
 bool attackIsActive = false;
@@ -230,6 +228,72 @@ unsigned long manualCode = 0;
 unsigned int manualProtocol = 1;
 unsigned int manualBitLength = 24;
 unsigned int manualDelay = 350;
+
+/*=================== EEPROM ==========================*/
+#define MAX_RA_SIGNALS 20
+#define SLOT_RA_SIZE sizeof(SimpleRAData)
+#define EEPROM_RA_ADDR 0
+
+SimpleRAData readRAData(uint8_t slot)
+{
+  SimpleRAData data;
+  EEPROM.get(EEPROM_RA_ADDR + slot * SLOT_RA_SIZE, data);
+  return data;
+}
+
+void writeRAData(uint8_t slot, const SimpleRAData &data)
+{
+  EEPROM.put(EEPROM_RA_ADDR + slot * SLOT_RA_SIZE, data);
+  EEPROM.commit();
+}
+
+void clearRAData(uint8_t slot)
+{
+  SimpleRAData empty = {};
+  EEPROM.put(EEPROM_RA_ADDR + slot * SLOT_RA_SIZE, empty);
+  EEPROM.commit();
+
+  lastUsedSlotRA = slot;
+}
+
+bool isDuplicateRA(const SimpleRAData &newData)
+{
+  for (uint8_t i = 0; i < lastUsedSlotRA; i++)
+  {
+    SimpleRAData existingData = readRAData(i);
+    if (newData.code == existingData.code &&
+        newData.length == existingData.length &&
+        newData.protocol == existingData.protocol)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+void findLastUsedSlotRA()
+{
+  for (uint8_t slot = 0; slot < MAX_RA_SIGNALS; slot++)
+  {
+    SimpleRAData data = readRAData(slot);
+    if (data.code == 0)
+    {
+      lastUsedSlotRA = slot;
+      return;
+    }
+  }
+  lastUsedSlotRA = 0;
+}
+
+void findReceivedSignalsRA()
+{
+  for (uint8_t slot = 0; slot < MAX_RA_SIGNALS; slot++)
+  {
+    SimpleRAData data = readRAData(slot);
+    if (data.code != 0)
+      receivedSignals++;
+  }
+}
 
 /*=================== FUNCTIONS ==========================*/
 /*********************** COMMON ***************************/

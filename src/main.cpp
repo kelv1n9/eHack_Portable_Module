@@ -33,6 +33,10 @@ void setup()
   currentLedMode = LED_ON;
 
   Serial.begin(9600);
+
+  EEPROM.begin(512);
+  findLastUsedSlotRA();
+  findReceivedSignalsRA();
 }
 
 void setup1()
@@ -44,7 +48,7 @@ void loop1()
 {
   handleSerialCommand();
 
-  if (successfullyConnected || currentMode == HF_SCAN || manualReplay)
+  if (successfullyConnected || manualReplay)
   {
     switch (currentMode)
     {
@@ -249,111 +253,6 @@ void loop1()
           isSending = true;
           lastSwitchTime = millis();
         }
-      }
-
-      break;
-    }
-    case HF_SCAN:
-    {
-      if (!initialized)
-      {
-        pinMode(GD0_PIN_CC, INPUT);
-        mySwitch.enableReceive(GD0_PIN_CC);
-        ELECHOUSE_cc1101.SetRx(radioFrequency);
-        currentLedMode = LED_BLINK_FAST;
-        initialized = true;
-      }
-
-      if (successfullyConnected && currentMode == HF_SCAN && receivedSignals > 0)
-      {
-        mySwitch.disableReceive();
-        mySwitch.enableTransmit(GD0_PIN_CC);
-        pinMode(GD0_PIN_CC, OUTPUT);
-        ELECHOUSE_cc1101.SetTx(radioFrequency);
-        mySwitch.setRepeatTransmit(10);
-        delay(1000);
-
-        for (uint8_t i = 0; i < receivedSignals; i++)
-        {
-          DBG("Sending %d code...!\n", i);
-          mySwitch.setProtocol(StoredSubSignals[i].protocol);
-          mySwitch.setPulseLength(StoredSubSignals[i].delay);
-          mySwitch.send(StoredSubSignals[i].code, StoredSubSignals[i].length);
-          delay(1000);
-        }
-
-        receivedSignals = 0;
-        initialized = false;
-        DBG("Successfully sent all buffer data!\n");
-        break;
-      }
-
-      if (mySwitch.available())
-      {
-        // Check if the signal is valid
-        if (mySwitch.getReceivedBitlength() < 10)
-        {
-          mySwitch.resetAvailable();
-          break;
-        }
-
-        DBG("Code: %d, Protocol: %d\n", mySwitch.getReceivedValue(), mySwitch.getReceivedProtocol());
-
-        // Reapiting the signal
-        if (successfullyConnected)
-        {
-          mySwitch.disableReceive();
-          mySwitch.enableTransmit(GD0_PIN_CC);
-          pinMode(GD0_PIN_CC, OUTPUT);
-          ELECHOUSE_cc1101.SetTx(radioFrequency);
-
-          mySwitch.setProtocol(mySwitch.getReceivedProtocol());
-          mySwitch.setRepeatTransmit(10);
-          mySwitch.setPulseLength(mySwitch.getReceivedDelay());
-          mySwitch.send(mySwitch.getReceivedValue(), mySwitch.getReceivedBitlength());
-          DBG("Successfully sent!\n");
-        }
-        // Store in memory
-        else
-        {
-          uint32_t newCode = mySwitch.getReceivedValue();
-          uint16_t newLength = mySwitch.getReceivedBitlength();
-          uint16_t newProtocol = mySwitch.getReceivedProtocol();
-          uint16_t newDelay = mySwitch.getReceivedDelay();
-
-          bool alreadyStored = false;
-          for (uint8_t i = 0; i < receivedSignals; i++)
-          {
-            if (StoredSubSignals[i].code == newCode &&
-                StoredSubSignals[i].length == newLength &&
-                StoredSubSignals[i].protocol == newProtocol)
-            {
-              alreadyStored = true;
-              DBG("Duplicate signal, skipped\n");
-              break;
-            }
-          }
-
-          if (!alreadyStored)
-          {
-            if (receivedSignals < MAX_STORED_SIGNALS)
-            {
-              StoredSubSignals[receivedSignals].code = newCode;
-              StoredSubSignals[receivedSignals].length = newLength;
-              StoredSubSignals[receivedSignals].protocol = newProtocol;
-              StoredSubSignals[receivedSignals].delay = newDelay;
-              receivedSignals++;
-              DBG("Stored in memory (code=%lu)\n", (unsigned long)newCode);
-            }
-            else
-            {
-              DBG("Buffer full. Signal ignored.\n");
-            }
-          }
-        }
-
-        mySwitch.resetAvailable();
-        initialized = false;
       }
 
       break;
@@ -974,6 +873,97 @@ void loop1()
     }
     }
   }
+
+  if (currentMode == HF_SCAN)
+  {
+    if (!initialized)
+    {
+      pinMode(GD0_PIN_CC, INPUT);
+      mySwitch.enableReceive(GD0_PIN_CC);
+      ELECHOUSE_cc1101.SetRx(radioFrequency);
+      currentLedMode = LED_BLINK_FAST;
+      initialized = true;
+    }
+
+    if (successfullyConnected && receivedSignals > 0)
+    {
+      mySwitch.disableReceive();
+      mySwitch.enableTransmit(GD0_PIN_CC);
+      pinMode(GD0_PIN_CC, OUTPUT);
+      ELECHOUSE_cc1101.SetTx(radioFrequency);
+      mySwitch.setRepeatTransmit(10);
+      delay(1000);
+
+      for (uint8_t i = 0; i < receivedSignals; i++)
+      {
+        DBG("Sending %d code...!\n", i);
+        SimpleRAData data = readRAData(i);
+        mySwitch.setProtocol(data.protocol);
+        mySwitch.setPulseLength(data.delay);
+        mySwitch.send(data.code, data.length);
+        clearRAData(i);
+        delay(1000);
+      }
+
+      receivedSignals = 0;
+      initialized = false;
+      DBG("Successfully sent all saved data!\n");
+      return;
+    }
+
+    if (mySwitch.available())
+    {
+      // Check if the signal is valid
+      if (mySwitch.getReceivedBitlength() < 10)
+      {
+        mySwitch.resetAvailable();
+        return;
+      }
+
+      uint32_t newCode = mySwitch.getReceivedValue();
+      uint16_t newLength = mySwitch.getReceivedBitlength();
+      uint16_t newProtocol = mySwitch.getReceivedProtocol();
+      uint16_t newDelay = mySwitch.getReceivedDelay();
+
+      DBG("Code: %d, Protocol: %d\n", newCode, newProtocol);
+
+      // Reapiting the signal
+      if (successfullyConnected)
+      {
+        mySwitch.disableReceive();
+        mySwitch.enableTransmit(GD0_PIN_CC);
+        pinMode(GD0_PIN_CC, OUTPUT);
+        ELECHOUSE_cc1101.SetTx(radioFrequency);
+
+        mySwitch.setProtocol(newProtocol);
+        mySwitch.setRepeatTransmit(10);
+        mySwitch.setPulseLength(newDelay);
+        mySwitch.send(newCode, newLength);
+        DBG("Successfully sent!\n");
+      }
+      // Store in memory
+      else
+      {
+        SimpleRAData data;
+        data.code = newCode;
+        data.length = newLength;
+        data.protocol = newProtocol;
+        data.delay = newDelay;
+
+        if (!isDuplicateRA(data))
+        {
+          writeRAData(lastUsedSlotRA, data);
+          lastUsedSlotRA = (lastUsedSlotRA + 1) % MAX_RA_SIGNALS;
+          if (receivedSignals < MAX_RA_SIGNALS)
+            receivedSignals++;
+          DBG("Stored in memory (code=%lu)\n", (unsigned long)newCode);
+        }
+      }
+
+      mySwitch.resetAvailable();
+      initialized = false;
+    }
+  }
 }
 
 // Loop for communication tasks
@@ -1156,24 +1146,6 @@ void loop()
   {
     DBG("Current menu: %d\n", currentMode);
     timer = millis();
-  }
-
-  static uint32_t bufferTimer;
-  if (currentMode == 3 && millis() - bufferTimer > 2000)
-  {
-    bufferTimer = millis();
-
-    DBG("=== StoredSubSignals (count=%u) ===\n", receivedSignals);
-    for (uint8_t i = 0; i < receivedSignals; i++)
-    {
-      SimpleRAData &s = StoredSubSignals[i];
-      DBG("[%u] code=%lu len=%u protocol=%u delay=%u\n",
-          i,
-          (unsigned long)s.code,
-          s.length,
-          s.protocol,
-          s.delay);
-    }
   }
 #endif
 }
