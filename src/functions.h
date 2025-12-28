@@ -1,6 +1,6 @@
 #pragma once
 
-#define DEBUG_eHack
+// #define DEBUG_eHack
 
 #ifdef DEBUG_eHack
 #define DBG(...)                \
@@ -19,6 +19,7 @@
 #include <EEPROM.h>
 
 #include <ELECHOUSE_CC1101_SRC_DRV.h>
+#include <Adafruit_Si4713.h>
 #include <DataTransmission.h>
 #include <RCSwitch.h>
 #include "signal_data.h"
@@ -28,7 +29,7 @@
 #define APP_NAME "eHack Portable"
 #define APP_VERSION "v1.2.0"
 
-#define DISABLE_DEVICE_PIN 28
+#define DISABLE_DEVICE_PIN 22
 #define DISABLE_DEVICE_DELAY 180000 // ms
 static uint32_t offTimer;
 
@@ -57,6 +58,8 @@ enum Mode
   UHF_USB_JAMMER,
   UHF_VIDEO_JAMMER,
   UHF_RC_JAMMER,
+
+  FM_RADIO,
 };
 
 Mode currentMode = IDLE;
@@ -95,7 +98,7 @@ uint32_t batteryTimer;
 #define transmissions 5
 
 /* =================== SubGHz MHz ================== */
-#define CSN_PIN_CC 1
+#define CSN_PIN_CC 5
 #define RSSI_WINDOW_MS 100
 #define RSSI_STEP_MS 50
 #define RSSI_BUFFER_SIZE 90
@@ -127,11 +130,6 @@ RCSwitch mySwitch = RCSwitch();
 
 uint8_t lastUsedSlotRA = 0;
 uint8_t selectedSlotRA = 0;
-
-// uint32_t capturedCode;
-// uint16_t capturedLength;
-// uint16_t capturedProtocol;
-// uint16_t capturedDelay;
 
 float radioFrequency = raFrequencies[1];
 bool attackIsActive = false;
@@ -197,6 +195,18 @@ ChannelHistory stored[126];
 
 uint8_t radioChannel = 0;
 
+// ================== FM RADIO ===========================/
+#define FM_ENABLE_PIN 9
+#define FM_RESETPIN 8
+#define RDS_STATION "RAINBOW FM"
+#define RDS_BUFFER "PEPEEEE"
+
+Adafruit_Si4713 radio_fm = Adafruit_Si4713(FM_RESETPIN);
+
+uint16_t FrequencyFM = 10000; // 100.00 MHz
+uint8_t currentLevelPacket[32];
+uint32_t asqTimer;
+
 // ================== Communication ===========================/
 #define CONNECTION_DELAY 5000
 #define NUMBER_OF_RETRIES 3
@@ -206,7 +216,6 @@ uint8_t radioChannel = 0;
 
 byte ping[4] = {'P', 'I', 'N', 'G'};
 byte pong[4] = {'P', 'O', 'N', 'G'};
-// byte inited[4] = {'I', 'N', 'I', 'T'};
 
 DataTransmission communication(&radio_RF24);
 
@@ -230,6 +239,7 @@ unsigned int manualBitLength = 24;
 unsigned int manualDelay = 350;
 
 /*=================== EEPROM ==========================*/
+#define MAX_EEPROM_VALUES 512
 #define MAX_RA_SIGNALS 20
 #define SLOT_RA_SIZE sizeof(SimpleRAData)
 #define EEPROM_RA_ADDR 0
@@ -293,6 +303,13 @@ void findReceivedSignalsRA()
     if (data.code != 0)
       receivedSignals++;
   }
+}
+
+void clearMemory()
+{
+  for (int i = 0; i < MAX_EEPROM_VALUES; i++)
+    EEPROM.write(i, 0xFF);
+  EEPROM.commit();
 }
 
 /*=================== FUNCTIONS ==========================*/
@@ -396,6 +413,12 @@ Mode getModeFromPacket(uint8_t *data, uint8_t len)
     return UHF_VIDEO_JAMMER;
   }
 
+  // FM RADIO command
+  else if (mode == COMMAND_FM_RADIO)
+  {
+    return FM_RADIO;
+  }
+
   return IDLE;
 }
 /*********************** CC1101 ***************************/
@@ -412,6 +435,12 @@ float getFrequencyFromPacket(uint8_t *data, uint8_t len)
     return raFrequencies[freqIndex];
   }
   return raFrequencies[1]; // Default frequency
+}
+
+uint16_t getFMFrequencyFromPacket(const uint8_t *payload, uint8_t payloadLen)
+{
+  uint16_t freq = (uint16_t)payload[2] | ((uint16_t)payload[3] << 8);
+  return freq;
 }
 
 void cc1101Init()
