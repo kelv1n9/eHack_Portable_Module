@@ -1,6 +1,6 @@
 #pragma once
 
-// #define DEBUG_eHack
+#define DEBUG_eHack
 
 #ifdef DEBUG_eHack
 #define DBG(...)                \
@@ -25,6 +25,7 @@
 #include "signal_data.h"
 #include "hardware/adc.h"
 #include "RF24.h"
+#include <GyverOLED.h>
 
 #define APP_NAME "eHack Portable"
 #define APP_VERSION "v1.3.0"
@@ -79,6 +80,11 @@ LedMode currentLedMode = LED_ON;
 
 static uint32_t ledTimer = 0;
 static bool ledState = false;
+
+/* ================= OLED ================== */
+
+GyverOLED<SSD1306_128x32, OLED_BUFFER> oled;
+
 
 /* ================= Battery ================== */
 #define BATTERY_COEFFICIENT 0.97

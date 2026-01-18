@@ -11,14 +11,18 @@ void setup()
   digitalWrite(FM_ENABLE_PIN, LOW);
   digitalWrite(DISABLE_DEVICE_PIN, LOW);
 
-// #ifdef DEBUG_eHack
+  // #ifdef DEBUG_eHack
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
-// #endif
+  // #endif
 
   Wire.setSDA(0);
   Wire.setSCL(1);
   Wire.begin();
+
+  Wire1.setSDA(18);
+  Wire1.setSCL(19);
+  Wire1.begin();
 
   SPI.setSCK(2);
   SPI.setTX(3);
@@ -46,6 +50,10 @@ void setup()
   // clearMemory();
   findLastUsedSlotRA();
   findReceivedSignalsRA();
+
+  oled.init();
+  oled.clear();
+  oled.update();
 }
 
 void setup1()
@@ -1192,6 +1200,17 @@ void loop()
       break;
     }
     }
+  }
+
+  static uint32_t displayTimer = 0;
+
+  if (millis() - displayTimer >= 1000)
+  {
+    oled.clear();
+    oled.setCursor(0, 0);
+    oled.print(successfullyConnected ? "Connected!" : "Connecting...");
+    oled.update();
+    displayTimer = millis();
   }
 
 #ifdef DEBUG_eHack
