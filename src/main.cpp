@@ -36,10 +36,33 @@ void setup()
   SPI1.setRX(12);
   SPI1.begin();
 
-  radio_RF24.begin(&SPI1);
-
   analogReadResolution(12);
   batVoltage = readBatteryVoltage();
+
+  oled.init();
+  oled.clear();
+  oled.update();
+
+  bool nrfInited = radio_RF24.begin(&SPI1);
+
+  if (!nrfInited)
+  {
+    while (!radio_RF24.begin(&SPI1))
+    {
+      oled.clear();
+      oled.setCursor(0, 0);
+      oled.print("Nrf24L01 Error!");
+      oled.update();
+    }
+  }
+  else
+  {
+    oled.clear();
+    oled.setCursor(0, 0);
+    oled.print("Nrf24L01 Inited!");
+    oled.update();
+    delay(1000);
+  }
 
   communication.setSlaveMode();
   communication.init();
@@ -50,10 +73,6 @@ void setup()
   // clearMemory();
   findLastUsedSlotRA();
   findReceivedSignalsRA();
-
-  oled.init();
-  oled.clear();
-  oled.update();
 }
 
 void setup1()
