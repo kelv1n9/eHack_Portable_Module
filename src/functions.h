@@ -25,7 +25,7 @@
 #include "signal_data.h"
 #include "hardware/adc.h"
 #include "RF24.h"
-#include <GyverOLED.h>
+#include "GyverOLED.h"
 
 #define APP_NAME "eHack Portable"
 #define APP_VERSION "v1.3.0"
