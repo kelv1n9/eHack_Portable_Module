@@ -2,11 +2,27 @@
 
 void setup()
 {
+  Serial.begin(9600);
+
+  pinMode(FM_RESETPIN, OUTPUT);
+  pinMode(FM_ENABLE_PIN, OUTPUT);
   pinMode(DISABLE_DEVICE_PIN, OUTPUT);
+  digitalWrite(FM_RESETPIN, LOW);
+  digitalWrite(FM_ENABLE_PIN, LOW);
   digitalWrite(DISABLE_DEVICE_PIN, LOW);
 
+  // #ifdef DEBUG_eHack
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
+  // #endif
+
+  Wire.setSDA(0);
+  Wire.setSCL(1);
+  Wire.begin();
+
+  Wire1.setSDA(18);
+  Wire1.setSCL(19);
+  Wire1.begin();
 
   SPI.setSCK(2);
   SPI.setTX(3);
@@ -20,21 +36,41 @@ void setup()
   SPI1.setRX(12);
   SPI1.begin();
 
-  radio_RF24.begin(&SPI1);
-
   analogReadResolution(12);
   batVoltage = readBatteryVoltage();
+
+  oled.init();
+  oled.clear();
+  oled.update();
+
+  bool nrfInited = radio_RF24.begin(&SPI1);
+
+  if (!nrfInited)
+  {
+    while (!radio_RF24.begin(&SPI1))
+    {
+      oled.clear();
+      oled.setCursor(0, 0);
+      oled.print("Nrf24L01 Error!");
+      oled.update();
+    }
+  }
+  else
+  {
+    oled.clear();
+    oled.setCursor(0, 0);
+    oled.print("Nrf24L01 Inited!");
+    oled.update();
+    delay(1000);
+  }
 
   communication.setSlaveMode();
   communication.init();
 
-  DBG("Current mode: %d\n\n", currentMode);
-
   currentLedMode = LED_ON;
 
-  Serial.begin(9600);
-
-  EEPROM.begin(512);
+  EEPROM.begin(MAX_EEPROM_VALUES);
+  // clearMemory();
   findLastUsedSlotRA();
   findReceivedSignalsRA();
 }
@@ -61,6 +97,8 @@ void loop1()
         mySwitch.resetAvailable();
         detachInterrupt(GD0_PIN_CC);
         digitalWrite(GD0_PIN_CC, LOW);
+        digitalWrite(FM_ENABLE_PIN, LOW);
+        digitalWrite(FM_RESETPIN, LOW);
         currentLedMode = LED_BLINK_SLOW;
         initialized = false;
         attackIsActive = false;
@@ -871,6 +909,34 @@ void loop1()
 
       break;
     }
+
+    case FM_RADIO:
+    {
+      if (!initialized)
+      {
+        digitalWrite(FM_ENABLE_PIN, HIGH);
+        digitalWrite(FM_RESETPIN, HIGH);
+
+        radio_fm.begin();
+
+        delay(1000);
+        radio_fm.setTXpower(115);
+        radio_fm.tuneFM(FrequencyFM);
+
+        radio_fm.readTuneStatus();
+        DBG("FM: Current frequency: %.2f MHz\n", radio_fm.currFreq / 100.0);
+        DBG("FM: Current dBuV: %d\n", radio_fm.currdBuV);
+        DBG("FM: Current Antenna Cap: %d\n", radio_fm.currAntCap);
+
+        radio_fm.beginRDS();
+        radio_fm.setRDSstation(RDS_STATION);
+        radio_fm.setRDSbuffer(RDS_BUFFER);
+
+        initialized = true;
+      }
+
+      break;
+    }
     }
   }
 
@@ -1065,9 +1131,18 @@ void loop()
         {
           checkConnectionTimer = millis();
           currentMode = getModeFromPacket(recievedData, recievedDataLen);
-          radioFrequency = getFrequencyFromPacket(recievedData, recievedDataLen);
+          if (currentMode == FM_RADIO)
+          {
+            FrequencyFM = getFMFrequencyFromPacket(recievedData, recievedDataLen);
+            radio_fm.tuneFM(FrequencyFM);
+            DBG("Received frequency: %lu MHz\n", FrequencyFM);
+          }
+          else
+          {
+            radioFrequency = getFrequencyFromPacket(recievedData, recievedDataLen);
+            DBG("Received frequency: %.2f MHz\n", radioFrequency);
+          }
           DBG("Received packet with mode: %d, length: %d\n", currentMode, recievedDataLen);
-          DBG("Received frequency: %.2f MHz\n", radioFrequency);
           initializedIdle = false;
 
           switch (currentMode)
@@ -1103,12 +1178,6 @@ void loop()
               break;
             }
           }
-
-          // if (currentMode != IDLE)
-          // {
-          //   communication.sendPacket(inited, 32);
-          //   DBG("Init was sent\n");
-          // }
         }
         else if (recievedData[0] == 'P' && recievedData[1] == 'I' && recievedData[2] == 'N' && recievedData[3] == 'G')
         {
@@ -1127,6 +1196,8 @@ void loop()
           delay(1000);
         }
       }
+
+      // Send to eHack
       if (millis() - batteryTimer > BATTERY_CHECK_INTERVAL)
       {
         batVoltage = readBatteryVoltage();
@@ -1135,9 +1206,30 @@ void loop()
         communication.sendPacket(batteryVoltagePacket, batteryVoltagePacketLen);
         batteryTimer = millis();
       }
+      if (currentMode == FM_RADIO && millis() - asqTimer > 200)
+      {
+        radio_fm.readASQ();
+        int8_t inLevel = radio_fm.currInLevel;
+        DBG("FM: Current sound level: %d\n", inLevel);
+        uint8_t pktLen = communication.buildPacket(COMMAND_FM_RADIO, (uint8_t *)&inLevel, sizeof(inLevel), currentLevelPacket);
+        communication.sendPacket(currentLevelPacket, pktLen);
+        asqTimer = millis();
+      }
+
       break;
     }
     }
+  }
+
+  static uint32_t displayTimer = 0;
+
+  if (millis() - displayTimer >= 1000)
+  {
+    oled.clear();
+    oled.setCursor(0, 0);
+    oled.print(successfullyConnected ? "Connected!" : "Connecting...");
+    oled.update();
+    displayTimer = millis();
   }
 
 #ifdef DEBUG_eHack
