@@ -28,7 +28,7 @@
 #include "GyverOLED.h"
 
 #define APP_NAME "eHack Portable"
-#define APP_VERSION "v1.3.0"
+#define APP_VERSION "v1.4.0"
 
 #define DISABLE_DEVICE_PIN 22
 #define DISABLE_DEVICE_DELAY 180000 // ms
@@ -85,6 +85,11 @@ static bool ledState = false;
 
 GyverOLED<SSD1306_128x32, OLED_BUFFER> oled;
 
+uint32_t displayTimer;
+
+#define OLED_UPDATE 200
+#define FONT_W 5
+#define FONT_H 8
 
 /* ================= Battery ================== */
 #define BATTERY_COEFFICIENT 0.97
@@ -876,6 +881,50 @@ void handleSerialCommand()
 
       Serial.printf("Manual HF_REPLAY: code=%lu proto=%u bits=%u delay=%u\n",
                     manualCode, manualProtocol, manualBitLength, manualDelay);
+    }
+  }
+}
+
+// ======================= OLED ======================= //
+int getTextWidth(const char *text)
+{
+  return strlen(text) * 6;
+}
+
+const static uint8_t radioConnectedIcon[7] PROGMEM = {
+    0x60, 0x00, 0x70, 0x00, 0x7c, 0x00, 0x7f};
+
+void drawRadioConnected()
+{
+  oled.setCursorXY(115, 0);
+  for (uint8_t i = 0; i < 7; i++)
+  {
+    oled.drawByte(pgm_read_byte(&(radioConnectedIcon[i])));
+  }
+}
+
+void drawCharRot90L(int x, int y, char c)
+{
+  if (c < 32 || c > 126)
+    return;
+
+  const uint8_t idx = static_cast<uint8_t>(c) - 32;
+  for (int col = 0; col < FONT_W; col++)
+  {
+    const uint8_t bits = pgm_read_byte(&_charMap[idx][col]);
+    for (int row = 0; row < FONT_H; row++)
+    {
+      if (!(bits & (1 << row)))
+        continue;
+
+      const int vx = x + col;
+      const int vy = y + row;
+      if (vx < 0 || vx >= OLED_32 || vy < 0 || vy >= OLED_WIDTH)
+        continue;
+
+      const int hwX = vy;
+      const int hwY = (OLED_32 - 1) - vx;
+      oled.dot(hwX, hwY, 1);
     }
   }
 }
