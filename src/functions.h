@@ -142,6 +142,7 @@ RCSwitch mySwitch = RCSwitch();
 uint8_t lastUsedSlotRA = 0;
 uint8_t selectedSlotRA = 0;
 
+uint32_t receivedCode = 0;
 float radioFrequency = raFrequencies[1];
 bool attackIsActive = false;
 
@@ -431,6 +432,102 @@ Mode getModeFromPacket(uint8_t *data, uint8_t len)
   }
 
   return IDLE;
+}
+
+const char *getModeLabel(Mode mode)
+{
+  switch (mode)
+  {
+  case IDLE:
+    return "IDLE";
+  case HF_SPECTRUM:
+    return "HF SPC";
+  case HF_ACTIVITY:
+    return "HF ACT";
+  case HF_SCAN:
+    return "HF SCN";
+  case HF_REPLAY:
+    return "HF RPL";
+  case HF_JAMMER:
+    return "HF JAM";
+  case HF_TESLA:
+    return "HF TSL";
+  case HF_BARRIER_SCAN:
+    return "B SCN";
+  case HF_BARRIER_REPLAY:
+    return "B RPL";
+  case HF_BARRIER_BRUTE_CAME:
+    return "B BC";
+  case HF_BARRIER_BRUTE_NICE:
+    return "B BN";
+  case UHF_SPECTRUM:
+    return "UHF SPC";
+  case UHF_ALL_JAMMER:
+    return "UHF JAM";
+  case UHF_WIFI_JAMMER:
+    return "WIFI";
+  case UHF_BT_JAMMER:
+    return "BT";
+  case UHF_BLE_JAMMER:
+    return "BLE";
+  case UHF_USB_JAMMER:
+    return "USB";
+  case UHF_VIDEO_JAMMER:
+    return "VID";
+  case UHF_RC_JAMMER:
+    return "RC";
+  case FM_RADIO:
+    return "FM";
+  }
+  return "UNK";
+}
+
+bool isUHFMode(Mode mode)
+{
+  switch (mode)
+  {
+  case UHF_SPECTRUM:
+  case UHF_ALL_JAMMER:
+  case UHF_WIFI_JAMMER:
+  case UHF_BT_JAMMER:
+  case UHF_BLE_JAMMER:
+  case UHF_USB_JAMMER:
+  case UHF_VIDEO_JAMMER:
+  case UHF_RC_JAMMER:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool isHFCodeMode(Mode mode)
+{
+  switch (mode)
+  {
+  case HF_ACTIVITY:
+  case HF_SCAN:
+  case HF_REPLAY:
+  case HF_BARRIER_SCAN:
+  case HF_BARRIER_REPLAY:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool isHFNonCodeMode(Mode mode)
+{
+  switch (mode)
+  {
+  case HF_SPECTRUM:
+  case HF_JAMMER:
+  case HF_TESLA:
+  case HF_BARRIER_BRUTE_CAME:
+  case HF_BARRIER_BRUTE_NICE:
+    return true;
+  default:
+    return false;
+  }
 }
 /*********************** CC1101 ***************************/
 float getFrequencyFromPacket(uint8_t *data, uint8_t len)

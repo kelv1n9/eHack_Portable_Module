@@ -256,6 +256,8 @@ void loop1()
             break;
           }
 
+          receivedCode = mySwitch.getReceivedValue();
+
           mySwitch.disableReceive();
           mySwitch.enableTransmit(GD0_PIN_CC);
           pinMode(GD0_PIN_CC, OUTPUT);
@@ -264,9 +266,9 @@ void loop1()
           mySwitch.setProtocol(mySwitch.getReceivedProtocol());
           mySwitch.setRepeatTransmit(10);
           mySwitch.setPulseLength(mySwitch.getReceivedDelay());
-          mySwitch.send(mySwitch.getReceivedValue(), mySwitch.getReceivedBitlength());
+          mySwitch.send(receivedCode, mySwitch.getReceivedBitlength());
           DBG("Successfully sent!\n");
-          DBG("Code: %d, Protocol: %d\n", mySwitch.getReceivedValue(), mySwitch.getReceivedProtocol());
+          DBG("Code: %d, Protocol: %d\n", receivedCode, mySwitch.getReceivedProtocol());
 
           mySwitch.resetAvailable();
           initialized = false;
@@ -333,14 +335,16 @@ void loop1()
         mySwitch.setRepeatTransmit(10);
         mySwitch.setPulseLength(mySwitch.getReceivedDelay());
         attackIsActive = true;
+
+        receivedCode = mySwitch.getReceivedValue();
       }
 
       if (attackIsActive && millis() - attackTimer >= 1000)
       {
-        mySwitch.send(mySwitch.getReceivedValue(), mySwitch.getReceivedBitlength());
+        mySwitch.send(receivedCode, mySwitch.getReceivedBitlength());
         attackTimer = millis();
         DBG("Successfully sent!\n");
-        DBG("Code: %d, Protocol: %d\n", mySwitch.getReceivedValue(), mySwitch.getReceivedProtocol());
+        DBG("Code: %d, Protocol: %d\n", receivedCode, mySwitch.getReceivedProtocol());
       }
 
       break;
@@ -973,12 +977,12 @@ void loop1()
         return;
       }
 
-      uint32_t newCode = mySwitch.getReceivedValue();
+      receivedCode = mySwitch.getReceivedValue();
       uint16_t newLength = mySwitch.getReceivedBitlength();
       uint16_t newProtocol = mySwitch.getReceivedProtocol();
       uint16_t newDelay = mySwitch.getReceivedDelay();
 
-      DBG("Code: %d, Protocol: %d\n", newCode, newProtocol);
+      DBG("Code: %d, Protocol: %d\n", receivedCode, newProtocol);
 
       // Reapiting the signal
       if (successfullyConnected)
@@ -991,14 +995,14 @@ void loop1()
         mySwitch.setProtocol(newProtocol);
         mySwitch.setRepeatTransmit(10);
         mySwitch.setPulseLength(newDelay);
-        mySwitch.send(newCode, newLength);
+        mySwitch.send(receivedCode, newLength);
         DBG("Successfully sent!\n");
       }
       // Store in memory
       else
       {
         SimpleRAData data;
-        data.code = newCode;
+        data.code = receivedCode;
         data.length = newLength;
         data.protocol = newProtocol;
         data.delay = newDelay;
@@ -1009,7 +1013,7 @@ void loop1()
           lastUsedSlotRA = (lastUsedSlotRA + 1) % MAX_RA_SIGNALS;
           if (receivedSignals < MAX_RA_SIGNALS)
             receivedSignals++;
-          DBG("Stored in memory (code=%lu)\n", (unsigned long)newCode);
+          DBG("Stored in memory (code=%lu)\n", (unsigned long)receivedCode);
         }
       }
 
@@ -1216,13 +1220,49 @@ void loop()
     drawCharRot90L(23, 0, 'C');
     oled.fastLineV(9, 0, 32);
 
+    char Text[20];
+    snprintf(Text, sizeof(Text), "E:%d", receivedSignals);
+    oled.setCursorXY(115 - getTextWidth(Text) - 2, 0);
+    oled.print(Text);
+
     if (successfullyConnected)
+    {
       drawRadioConnected();
 
-    char Text[20];
-    sprintf(Text, successfullyConnected ? "Connected!" : "Connecting...");
-    oled.setCursorXY((128 - getTextWidth(Text)) / 2, (32 - 8) / 2);
-    oled.print(Text);
+      char Text[20];
+      snprintf(Text, sizeof(Text), "%s", getModeLabel(currentMode));
+      oled.setCursorXY(12, 0);
+      oled.print(Text);
+
+      if (currentMode == FM_RADIO)
+      {
+        char FmText[20];
+        snprintf(FmText, sizeof(FmText), "%.2f MHz", FrequencyFM / 100.0f);
+        oled.setCursorXY((128 - getTextWidth(FmText)) / 2, 16);
+        oled.print(FmText);
+      }
+      else if (isUHFMode(currentMode))
+      {
+        char ChannelText[12];
+        snprintf(ChannelText, sizeof(ChannelText), "CH:%u", radioChannel);
+        oled.setCursorXY((128 - getTextWidth(ChannelText)) / 2, 16);
+        oled.print(ChannelText);
+      }
+      else if (isHFCodeMode(currentMode))
+      {
+        char CodeText[20];
+        snprintf(CodeText, sizeof(CodeText), "C:%lu", (unsigned long)receivedCode);
+        oled.setCursorXY((128 - getTextWidth(CodeText)) / 2, 16);
+        oled.print(CodeText);
+      }
+    }
+    else
+    {
+      char Text[20];
+      snprintf(Text, sizeof(Text), "Connecting...");
+      oled.setCursorXY((128 - getTextWidth(Text)) / 2, 16);
+      oled.print(Text);
+    }
 
     oled.update();
     displayTimer = millis();
