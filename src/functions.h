@@ -87,7 +87,7 @@ GyverOLED<SSD1306_128x32, OLED_BUFFER> oled;
 
 uint32_t displayTimer;
 
-#define OLED_UPDATE 200
+#define OLED_UPDATE 100
 #define FONT_W 5
 #define FONT_H 8
 
@@ -109,7 +109,12 @@ uint32_t batteryTimer;
 #define transmissions 5
 
 /* =================== SubGHz MHz ================== */
+#define SCK_PIN_CC 2
+#define TX_PIN_CC 3
+#define RX_PIN_CC 4
 #define CSN_PIN_CC 5
+#define GD0_PIN_CC 6
+
 #define RSSI_WINDOW_MS 100
 #define RSSI_STEP_MS 50
 #define RSSI_BUFFER_SIZE 90
@@ -123,8 +128,6 @@ struct SimpleRAData
 };
 
 uint8_t receivedSignals;
-
-const byte GD0_PIN_CC = 6;
 
 int currentRssi = -100;
 uint8_t currentFreqIndex = 1;
@@ -173,8 +176,12 @@ volatile byte niceCounter = 0;
 volatile uint32_t niceCode = 0;
 
 // ================= 2.4 GHZ ===========================/
+#define SCK_PIN_NRF 10
+#define TX_PIN_NRF 11
+#define RX_PIN_NRF 12
 #define CE_PIN_NRF 7
 #define CSN_PIN_NRF 13
+
 #define START_CHANNEL 45
 #define NUM_CHANNELS 126
 
@@ -256,6 +263,11 @@ unsigned int manualDelay = 350;
 #define SLOT_RA_SIZE sizeof(SimpleRAData)
 #define EEPROM_RA_ADDR 0
 
+static inline bool isEmptyRA(const SimpleRAData &data)
+{
+  return data.code == 0 || data.code == 0xFFFFFFFFu;
+}
+
 SimpleRAData readRAData(uint8_t slot)
 {
   SimpleRAData data;
@@ -283,6 +295,8 @@ bool isDuplicateRA(const SimpleRAData &newData)
   for (uint8_t i = 0; i < lastUsedSlotRA; i++)
   {
     SimpleRAData existingData = readRAData(i);
+    if (isEmptyRA(existingData))
+      continue;
     if (newData.code == existingData.code &&
         newData.length == existingData.length &&
         newData.protocol == existingData.protocol)
@@ -298,7 +312,7 @@ void findLastUsedSlotRA()
   for (uint8_t slot = 0; slot < MAX_RA_SIGNALS; slot++)
   {
     SimpleRAData data = readRAData(slot);
-    if (data.code == 0)
+    if (isEmptyRA(data))
     {
       lastUsedSlotRA = slot;
       return;
@@ -309,10 +323,11 @@ void findLastUsedSlotRA()
 
 void findReceivedSignalsRA()
 {
+  receivedSignals = 0;
   for (uint8_t slot = 0; slot < MAX_RA_SIGNALS; slot++)
   {
     SimpleRAData data = readRAData(slot);
-    if (data.code != 0)
+    if (!isEmptyRA(data))
       receivedSignals++;
   }
 }

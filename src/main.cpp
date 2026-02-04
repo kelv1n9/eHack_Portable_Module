@@ -16,24 +16,27 @@ void setup()
   digitalWrite(LED_BUILTIN, HIGH);
   // #endif
 
+  // FM Radio
   Wire.setSDA(0);
   Wire.setSCL(1);
   Wire.begin();
 
+  // OLED
   Wire1.setSDA(18);
   Wire1.setSCL(19);
+  Wire1.setClock(400000);
   Wire1.begin();
 
-  SPI.setSCK(2);
-  SPI.setTX(3);
-  SPI.setRX(4);
+  SPI.setSCK(SCK_PIN_CC);
+  SPI.setTX(TX_PIN_CC);
+  SPI.setRX(RX_PIN_CC);
   SPI.begin();
 
   cc1101Init();
 
-  SPI1.setSCK(10);
-  SPI1.setTX(11);
-  SPI1.setRX(12);
+  SPI1.setSCK(SCK_PIN_NRF);
+  SPI1.setTX(TX_PIN_NRF);
+  SPI1.setRX(RX_PIN_NRF);
   SPI1.begin();
 
   radio_RF24.begin(&SPI1);
@@ -42,6 +45,7 @@ void setup()
   batVoltage = readBatteryVoltage();
 
   oled.init();
+  oled.textMode(BUF_ADD);
   oled.setCursorXY((OLED_WIDTH - getTextWidth(APP_NAME)) / 2, 6);
   oled.print(APP_NAME);
 
@@ -951,18 +955,17 @@ void loop1()
       mySwitch.setRepeatTransmit(10);
       delay(1000);
 
-      for (uint8_t i = 0; i < receivedSignals; i++)
+      for (int8_t i = (int8_t)receivedSignals - 1; i >= 0; --i, --receivedSignals)
       {
         DBG("Sending %d code...!\n", i);
-        SimpleRAData data = readRAData(i);
+        SimpleRAData data = readRAData((uint8_t)i);
         mySwitch.setProtocol(data.protocol);
         mySwitch.setPulseLength(data.delay);
         mySwitch.send(data.code, data.length);
-        clearRAData(i);
+        clearRAData((uint8_t)i);
         delay(1000);
       }
 
-      receivedSignals = 0;
       initialized = false;
       DBG("Successfully sent all saved data!\n");
       return;
@@ -1122,7 +1125,7 @@ void loop()
         {
           checkConnectionTimer = millis();
           currentMode = getModeFromPacket(recievedData, recievedDataLen);
-          if (currentMode == FM_RADIO)
+          if (currentMode == FM_RADIO && initialized)
           {
             FrequencyFM = getFMFrequencyFromPacket(recievedData, recievedDataLen);
             radio_fm.tuneFM(FrequencyFM);
@@ -1216,51 +1219,67 @@ void loop()
   {
     oled.clear();
 
-    drawCharRot90L(5, 0, 'W');
-    drawCharRot90L(23, 0, 'C');
-    oled.fastLineV(9, 0, 32);
+    drawCharRot90L(2, 0, 'w');
+    drawCharRot90L(22, 0, 'c');
+    oled.fastLineV(9, 0, 31);
 
     char Text[20];
     snprintf(Text, sizeof(Text), "E:%d", receivedSignals);
     oled.setCursorXY(115 - getTextWidth(Text) - 2, 0);
     oled.print(Text);
 
-    if (successfullyConnected)
+    if (successfullyConnected || currentMode == HF_SCAN)
     {
-      drawRadioConnected();
+      if (successfullyConnected)
+        drawRadioConnected();
 
       char Text[20];
       snprintf(Text, sizeof(Text), "%s", getModeLabel(currentMode));
-      oled.setCursorXY(12, 0);
+      oled.setCursorXY(14, 0);
       oled.print(Text);
 
-      if (currentMode == FM_RADIO)
+      if (currentMode == IDLE && receivedSignals > 0)
+      {
+        if (((millis() / 500) % 2) == 0)
+        {
+          char NoticeText[20];
+          snprintf(NoticeText, sizeof(NoticeText), "RX CODES");
+          oled.setCursorXY(10 + (128 - getTextWidth(NoticeText)) / 2, 16);
+          oled.print(NoticeText);
+        }
+      }
+      else if (currentMode == FM_RADIO)
       {
         char FmText[20];
         snprintf(FmText, sizeof(FmText), "%.2f MHz", FrequencyFM / 100.0f);
-        oled.setCursorXY((128 - getTextWidth(FmText)) / 2, 16);
+        oled.setCursorXY(10 + (128 - getTextWidth(FmText)) / 2, 16);
         oled.print(FmText);
       }
       else if (isUHFMode(currentMode))
       {
         char ChannelText[12];
         snprintf(ChannelText, sizeof(ChannelText), "CH:%u", radioChannel);
-        oled.setCursorXY((128 - getTextWidth(ChannelText)) / 2, 16);
+        oled.setCursorXY(10 + (128 - getTextWidth(ChannelText)) / 2, 16);
         oled.print(ChannelText);
       }
       else if (isHFCodeMode(currentMode))
       {
         char CodeText[20];
         snprintf(CodeText, sizeof(CodeText), "C:%lu", (unsigned long)receivedCode);
-        oled.setCursorXY((128 - getTextWidth(CodeText)) / 2, 16);
+        oled.setCursorXY(10 + (128 - getTextWidth(CodeText)) / 2, 12);
         oled.print(CodeText);
+
+        char FreqText[20];
+        snprintf(FreqText, sizeof(FreqText), "F:%.2f MHz", radioFrequency);
+        oled.setCursorXY(10 + (128 - getTextWidth(FreqText)) / 2, 23);
+        oled.print(FreqText);
       }
     }
     else
     {
       char Text[20];
       snprintf(Text, sizeof(Text), "Connecting...");
-      oled.setCursorXY((128 - getTextWidth(Text)) / 2, 16);
+      oled.setCursorXY(10 + (128 - getTextWidth(Text)) / 2, 16);
       oled.print(Text);
     }
 
