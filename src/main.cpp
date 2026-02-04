@@ -36,33 +36,20 @@ void setup()
   SPI1.setRX(12);
   SPI1.begin();
 
+  radio_RF24.begin(&SPI1);
+
   analogReadResolution(12);
   batVoltage = readBatteryVoltage();
 
   oled.init();
-  oled.clear();
+  oled.setCursorXY((OLED_WIDTH - getTextWidth(APP_NAME)) / 2, 6);
+  oled.print(APP_NAME);
+
+  oled.setCursorXY((OLED_WIDTH - getTextWidth(APP_VERSION)) / 2, 18);
+  oled.print(APP_VERSION);
   oled.update();
 
-  bool nrfInited = radio_RF24.begin(&SPI1);
-
-  if (!nrfInited)
-  {
-    while (!radio_RF24.begin(&SPI1))
-    {
-      oled.clear();
-      oled.setCursor(0, 0);
-      oled.print("Nrf24L01 Error!");
-      oled.update();
-    }
-  }
-  else
-  {
-    oled.clear();
-    oled.setCursor(0, 0);
-    oled.print("Nrf24L01 Inited!");
-    oled.update();
-    delay(1000);
-  }
+  delay(1000);
 
   communication.setSlaveMode();
   communication.init();
@@ -1221,13 +1208,22 @@ void loop()
     }
   }
 
-  static uint32_t displayTimer = 0;
-
-  if (millis() - displayTimer >= 1000)
+  if (millis() - displayTimer >= OLED_UPDATE)
   {
     oled.clear();
-    oled.setCursor(0, 0);
-    oled.print(successfullyConnected ? "Connected!" : "Connecting...");
+
+    drawCharRot90L(5, 0, 'W');
+    drawCharRot90L(23, 0, 'C');
+    oled.fastLineV(9, 0, 32);
+
+    if (successfullyConnected)
+      drawRadioConnected();
+
+    char Text[20];
+    sprintf(Text, successfullyConnected ? "Connected!" : "Connecting...");
+    oled.setCursorXY((128 - getTextWidth(Text)) / 2, (32 - 8) / 2);
+    oled.print(Text);
+
     oled.update();
     displayTimer = millis();
   }
