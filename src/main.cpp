@@ -1230,35 +1230,38 @@ void loop()
     drawCharRot90L(22, 0, 'c');
     oled.fastLineV(9, 0, 31);
 
-    char Text[20];
-    snprintf(Text, sizeof(Text), "%d", receivedSignals);
-    int eepromX = successfullyConnected ? (115 - getTextWidth(Text) - 2) : (128 - getTextWidth(Text));
-    oled.setCursorXY(eepromX, 0);
-    oled.print(Text);
+    char BatText[8];
+    uint8_t batPct = voltageToPercent(batVoltage);
+    snprintf(BatText, sizeof(BatText), "%u%%", batPct);
+    int batX = 128 - getTextWidth(BatText);
+    oled.setCursorXY(batX, 0);
+    oled.print(BatText);
+
+    int right = batX - 2;
+    if (successfullyConnected)
+    {
+      int iconX = batX - 5 - 7;
+      drawRadioConnected(iconX);
+      right = iconX - 2;
+    }
 
     if (!isUHFMode(currentMode))
     {
-      char BatText[8];
-      uint8_t batPct = voltageToPercent(batVoltage);
-      snprintf(BatText, sizeof(BatText), "%u%%", batPct);
+      char Text[20];
+      snprintf(Text, sizeof(Text), "%d", receivedSignals);
+      int eepromX = right - getTextWidth(Text);
 
       int modeW = getTextWidth(getModeLabel(currentMode));
-      int batW = getTextWidth(BatText);
       int left = 14 + modeW + 2;
-      int right = eepromX - batW - 2;
+      if (eepromX < left)
+        eepromX = left;
 
-      if (right >= left)
-      {
-        oled.setCursorXY(right < left ? left : right, 0);
-        oled.print(BatText);
-      }
+      oled.setCursorXY(eepromX, 0);
+      oled.print(Text);
     }
 
     if (successfullyConnected || currentMode == HF_SCAN)
     {
-      if (successfullyConnected)
-        drawRadioConnected();
-
       char Text[20];
       snprintf(Text, sizeof(Text), "%s", getModeLabel(currentMode));
       oled.setCursorXY(14, 0);
@@ -1285,7 +1288,7 @@ void loop()
       {
         char ChannelText[12];
         snprintf(ChannelText, sizeof(ChannelText), "CH:%u", radioChannel);
-        oled.setCursorXY(65, 0);
+        oled.setCursorXY(60, 0);
         oled.print(ChannelText);
       }
       else if (isHFCodeMode(currentMode))
