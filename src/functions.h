@@ -1040,3 +1040,27 @@ void drawCharRot90L(int x, int y, char c)
     }
   }
 }
+
+void ShowJamming()
+{
+  static uint16_t sineOffset = 0;
+
+  const int yCenter = 20;
+  const int amplitude = 8;
+  const float k1 = 1.0f / 10.0f;
+  const float k2 = 1.0f / 12.0f;
+
+  for (int x = 10; x < 118; x++)
+  {
+    int y = yCenter + (int)(sinf((x + sineOffset) * k1) * amplitude);
+    oled.dot(x, y);
+  }
+
+  for (int x = 10; x < 118; x++)
+  {
+    int y = yCenter + (int)(sinf((x + sineOffset + 12) * k2) * amplitude);
+    oled.dot(x, y);
+  }
+
+  sineOffset += 2;
+}

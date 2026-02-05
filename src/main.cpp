@@ -1200,7 +1200,7 @@ void loop()
         communication.sendPacket(batteryVoltagePacket, batteryVoltagePacketLen);
         batteryTimer = millis();
       }
-      if (currentMode == FM_RADIO && millis() - asqTimer > 200)
+      if (currentMode == FM_RADIO && initialized && millis() - asqTimer > 200)
       {
         radio_fm.readASQ();
         int8_t inLevel = radio_fm.currInLevel;
@@ -1224,8 +1224,9 @@ void loop()
     oled.fastLineV(9, 0, 31);
 
     char Text[20];
-    snprintf(Text, sizeof(Text), "E:%d", receivedSignals);
-    oled.setCursorXY(115 - getTextWidth(Text) - 2, 0);
+    snprintf(Text, sizeof(Text), "%d", receivedSignals);
+    int eepromX = successfullyConnected ? (115 - getTextWidth(Text) - 2) : (128 - getTextWidth(Text));
+    oled.setCursorXY(eepromX, 0);
     oled.print(Text);
 
     if (successfullyConnected || currentMode == HF_SCAN)
@@ -1259,20 +1260,26 @@ void loop()
       {
         char ChannelText[12];
         snprintf(ChannelText, sizeof(ChannelText), "CH:%u", radioChannel);
-        oled.setCursorXY(10 + (128 - getTextWidth(ChannelText)) / 2, 16);
+        oled.setCursorXY(65, 0);
         oled.print(ChannelText);
       }
       else if (isHFCodeMode(currentMode))
       {
         char CodeText[20];
-        snprintf(CodeText, sizeof(CodeText), "C:%lu", (unsigned long)receivedCode);
+        snprintf(CodeText, sizeof(CodeText), receivedCode == 0 ? "Listening..." : "C: %lu",
+                 (unsigned long)receivedCode);
         oled.setCursorXY(10 + (128 - getTextWidth(CodeText)) / 2, 12);
         oled.print(CodeText);
 
         char FreqText[20];
-        snprintf(FreqText, sizeof(FreqText), "F:%.2f MHz", radioFrequency);
+        snprintf(FreqText, sizeof(FreqText), "%.2f MHz", radioFrequency);
         oled.setCursorXY(10 + (128 - getTextWidth(FreqText)) / 2, 23);
         oled.print(FreqText);
+      }
+
+      if (currentMode == HF_SPECTRUM || currentMode == HF_JAMMER || currentMode == HF_TESLA || isUHFMode(currentMode))
+      {
+        ShowJamming();
       }
     }
     else
