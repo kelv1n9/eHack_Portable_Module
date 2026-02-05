@@ -42,7 +42,6 @@ void setup()
   radio_RF24.begin(&SPI1);
 
   analogReadResolution(12);
-  batVoltage = readBatteryVoltage();
 
   oled.init();
   oled.textMode(BUF_ADD);
@@ -64,6 +63,8 @@ void setup()
   // clearMemory();
   findLastUsedSlotRA();
   findReceivedSignalsRA();
+
+  batVoltage = readBatteryVoltage();
 }
 
 void setup1()
@@ -1064,6 +1065,12 @@ void loop()
   {
     currentLedMode = LED_ON;
 
+    if (millis() - batteryTimer > BATTERY_CHECK_INTERVAL_DISCONNECTED)
+    {
+      batVoltage = readBatteryVoltage();
+      batteryTimer = millis();
+    }
+
     if (millis() - offTimer > DISABLE_DEVICE_DELAY && currentMode != HF_SCAN && !Serial.available())
     {
       DBG("Going to sleep...: %d\n", currentMode);
@@ -1229,6 +1236,24 @@ void loop()
     oled.setCursorXY(eepromX, 0);
     oled.print(Text);
 
+    if (!isUHFMode(currentMode))
+    {
+      char BatText[8];
+      uint8_t batPct = voltageToPercent(batVoltage);
+      snprintf(BatText, sizeof(BatText), "%u%%", batPct);
+
+      int modeW = getTextWidth(getModeLabel(currentMode));
+      int batW = getTextWidth(BatText);
+      int left = 14 + modeW + 2;
+      int right = eepromX - batW - 2;
+
+      if (right >= left)
+      {
+        oled.setCursorXY(right < left ? left : right, 0);
+        oled.print(BatText);
+      }
+    }
+
     if (successfullyConnected || currentMode == HF_SCAN)
     {
       if (successfullyConnected)
@@ -1266,7 +1291,7 @@ void loop()
       else if (isHFCodeMode(currentMode))
       {
         char CodeText[20];
-        snprintf(CodeText, sizeof(CodeText), receivedCode == 0 ? "Listening..." : "C: %lu",
+        snprintf(CodeText, sizeof(CodeText), receivedCode == 0 ? "Listening..." : "Code: %lu",
                  (unsigned long)receivedCode);
         oled.setCursorXY(10 + (128 - getTextWidth(CodeText)) / 2, 12);
         oled.print(CodeText);

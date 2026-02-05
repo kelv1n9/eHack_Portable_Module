@@ -99,7 +99,11 @@ uint32_t displayTimer;
 #define V_REF 3.3
 
 #define BATTERY_CHECK_INTERVAL 20000
+#define BATTERY_CHECK_INTERVAL_DISCONNECTED 5000
 #define BATTERY_READ_ITERATIONS 10
+
+#define BATTERY_MIN_VOLTAGE 3.2f
+#define BATTERY_MAX_VOLTAGE 4.2f
 
 float batVoltage;
 uint32_t batteryTimer;
@@ -352,6 +356,17 @@ float readBatteryVoltage()
   }
 
   return (float)BATTERY_COEFFICIENT * (total / (float)BATTERY_READ_ITERATIONS) * (float)BATTERY_RESISTANCE_COEFFICIENT * (float)V_REF / 4095.0;
+}
+
+uint8_t voltageToPercent(float voltage)
+{
+  if (voltage <= BATTERY_MIN_VOLTAGE)
+    return 0;
+  if (voltage >= BATTERY_MAX_VOLTAGE)
+    return 100;
+
+  float pct = (voltage - BATTERY_MIN_VOLTAGE) * 100.0f / (BATTERY_MAX_VOLTAGE - BATTERY_MIN_VOLTAGE);
+  return (uint8_t)(pct + 0.5f);
 }
 
 Mode getModeFromPacket(uint8_t *data, uint8_t len)
