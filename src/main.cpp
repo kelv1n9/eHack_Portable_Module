@@ -51,6 +51,7 @@ void setup()
   oled.setCursorXY((OLED_WIDTH - getTextWidth(APP_VERSION)) / 2, 18);
   oled.print(APP_VERSION);
   oled.update();
+  resetDisplayPowerSave();
 
   delay(1000);
 
@@ -1032,6 +1033,7 @@ void loop()
 {
   uint32_t onTime = 0;
   uint32_t offTime = 0;
+  static bool lastConnected = successfullyConnected;
 
   switch (currentLedMode)
   {
@@ -1060,6 +1062,18 @@ void loop()
       ledTimer = millis();
     }
   }
+
+  bool modeChanged = (currentMode != lastMode);
+  bool serialActivity = Serial.available();
+  bool justConnected = (successfullyConnected && !lastConnected);
+
+  if (modeChanged || serialActivity || justConnected)
+  {
+    resetDisplayPowerSave();
+  }
+
+  lastMode = currentMode;
+  lastConnected = successfullyConnected;
 
   if (!successfullyConnected)
   {
@@ -1224,98 +1238,138 @@ void loop()
 
   if (millis() - displayTimer >= OLED_UPDATE)
   {
+    if (!isScreenOff)
+    {
+      if (millis() - brightnessTimer > BRIGHTNESS_TIME)
+      {
+        oled.setContrast(MIN_BRIGHTNESS);
+      }
+      
+      if (millis() - screenOffTimer > SCREENOFF_TIME)
+      {
+        isScreenOff = true;
+      }
+    }
+
     oled.clear();
-
-    drawCharRot90L(2, 0, 'w');
-    drawCharRot90L(22, 0, 'c');
-    oled.fastLineV(9, 0, 31);
-
-    char BatText[8];
-    uint8_t batPct = voltageToPercent(batVoltage);
-    snprintf(BatText, sizeof(BatText), "%u%%", batPct);
-    int batX = 128 - getTextWidth(BatText);
-    oled.setCursorXY(batX, 0);
-    oled.print(BatText);
-
-    int right = batX - 2;
-    if (successfullyConnected)
+    
+    if (isScreenOff)
     {
-      int iconX = batX - 5 - 7;
-      drawRadioConnected(iconX);
-      right = iconX - 2;
-    }
-
-    if (!isUHFMode(currentMode))
-    {
-      char Text[20];
-      snprintf(Text, sizeof(Text), "%d", receivedSignals);
-      int eepromX = right - getTextWidth(Text);
-
-      int modeW = getTextWidth(getModeLabel(currentMode));
-      int left = 14 + modeW + 2;
-      if (eepromX < left)
-        eepromX = left;
-
-      oled.setCursorXY(eepromX, 0);
-      oled.print(Text);
-    }
-
-    if (successfullyConnected || currentMode == HF_SCAN)
-    {
-      char Text[20];
-      snprintf(Text, sizeof(Text), "%s", getModeLabel(currentMode));
-      oled.setCursorXY(14, 0);
-      oled.print(Text);
-
-      if (currentMode == IDLE && receivedSignals > 0)
+      if ((millis() / 1000) % 2)
       {
-        if (((millis() / 500) % 2) == 0)
-        {
-          char NoticeText[20];
-          snprintf(NoticeText, sizeof(NoticeText), "RX CODES");
-          oled.setCursorXY(10 + (128 - getTextWidth(NoticeText)) / 2, 16);
-          oled.print(NoticeText);
-        }
-      }
-      else if (currentMode == FM_RADIO)
-      {
-        char FmText[20];
-        snprintf(FmText, sizeof(FmText), "%.2f MHz", FrequencyFM / 100.0f);
-        oled.setCursorXY(10 + (128 - getTextWidth(FmText)) / 2, 16);
-        oled.print(FmText);
-      }
-      else if (isUHFMode(currentMode))
-      {
-        char ChannelText[12];
-        snprintf(ChannelText, sizeof(ChannelText), "CH:%u", radioChannel);
-        oled.setCursorXY(60, 0);
-        oled.print(ChannelText);
-      }
-      else if (isHFCodeMode(currentMode))
-      {
-        char CodeText[20];
-        snprintf(CodeText, sizeof(CodeText), receivedCode == 0 ? "Listening..." : "Code: %lu",
-                 (unsigned long)receivedCode);
-        oled.setCursorXY(10 + (128 - getTextWidth(CodeText)) / 2, 12);
-        oled.print(CodeText);
-
-        char FreqText[20];
-        snprintf(FreqText, sizeof(FreqText), "%.2f MHz", radioFrequency);
-        oled.setCursorXY(10 + (128 - getTextWidth(FreqText)) / 2, 23);
-        oled.print(FreqText);
-      }
-
-      if (currentMode == HF_SPECTRUM || currentMode == HF_JAMMER || currentMode == HF_TESLA || isUHFMode(currentMode))
-      {
-        ShowJamming();
+        oled.circle(122, 4, 1, 1);
       }
     }
     else
     {
-      char Text[20];
-      snprintf(Text, sizeof(Text), "Connecting...");
-      oled.setCursorXY(10 + (128 - getTextWidth(Text)) / 2, 16);
-      oled.print(Text);
+      drawCharRot90L(2, 0, 'w');
+      drawCharRot90L(22, 0, 'c');
+      oled.fastLineV(9, 0, 31);
+
+      char BatText[8];
+      uint8_t batPct = voltageToPercent(batVoltage);
+      snprintf(BatText, sizeof(BatText), "%u%%", batPct);
+      int batX = 128 - getTextWidth(BatText);
+      oled.setCursorXY(batX, 0);
+      oled.print(BatText);
+
+      int right = batX - 2;
+      if (successfullyConnected)
+      {
+        int iconX = batX - 5 - 7;
+        drawRadioConnected(iconX);
+        right = iconX - 2;
+      }
+
+      if (!isUHFMode(currentMode))
+      {
+        char Text[20];
+        snprintf(Text, sizeof(Text), "%d", receivedSignals);
+        int eepromX = right - getTextWidth(Text);
+
+        int modeW = getTextWidth(getModeLabel(currentMode));
+        int left = 14 + modeW + 2;
+        if (eepromX < left)
+          eepromX = left;
+
+        oled.setCursorXY(eepromX, 0);
+        oled.print(Text);
+      }
+
+      if (successfullyConnected || currentMode == HF_SCAN)
+      {
+        char Text[20];
+        snprintf(Text, sizeof(Text), "%s", getModeLabel(currentMode));
+        oled.setCursorXY(14, 0);
+        oled.print(Text);
+
+        if (currentMode == IDLE && receivedSignals > 0)
+        {
+          if (((millis() / 500) % 2) == 0)
+          {
+            char NoticeText[20];
+            snprintf(NoticeText, sizeof(NoticeText), "RX CODES");
+            oled.setCursorXY(10 + (128 - getTextWidth(NoticeText)) / 2, 16);
+            oled.print(NoticeText);
+          }
+        }
+        else if (currentMode == IDLE)
+        {
+          const char *idleBase = "Waiting";
+          const char *idleText = withAnimatedDots(idleBase);
+          const int idleMaxWidth = getTextWidth(idleBase) + 3 * 6;
+          oled.setCursorXY(10 + (128 - idleMaxWidth) / 2, 16);
+          oled.print(idleText);
+        }
+        else if (currentMode == FM_RADIO)
+        {
+          char FmText[20];
+          snprintf(FmText, sizeof(FmText), "%.2f MHz", FrequencyFM / 100.0f);
+          oled.setCursorXY(10 + (128 - getTextWidth(FmText)) / 2, 16);
+          oled.print(FmText);
+        }
+        else if (isUHFMode(currentMode))
+        {
+          char ChannelText[12];
+          snprintf(ChannelText, sizeof(ChannelText), "CH:%u", radioChannel);
+          oled.setCursorXY(60, 0);
+          oled.print(ChannelText);
+        }
+        else if (isHFCodeMode(currentMode))
+        {
+          char CodeText[20];
+          if (receivedCode == 0)
+          {
+            snprintf(CodeText, sizeof(CodeText), "%s", withAnimatedDots("Listening"));
+            const int listeningMaxWidth = getTextWidth("Listening") + 3 * 6;
+            oled.setCursorXY(10 + (128 - listeningMaxWidth) / 2, 12);
+          }
+          else
+          {
+            snprintf(CodeText, sizeof(CodeText), "Code: %lu", (unsigned long)receivedCode);
+            oled.setCursorXY(10 + (128 - getTextWidth(CodeText)) / 2, 12);
+          }
+          oled.print(CodeText);
+
+          char FreqText[20];
+          snprintf(FreqText, sizeof(FreqText), "%.2f MHz", radioFrequency);
+          oled.setCursorXY(10 + (128 - getTextWidth(FreqText)) / 2, 23);
+          oled.print(FreqText);
+        }
+
+        if (currentMode == HF_SPECTRUM || currentMode == HF_JAMMER || currentMode == HF_TESLA || isUHFMode(currentMode))
+        {
+          ShowJamming();
+        }
+      }
+      else
+      {
+        const char *connectBase = "Connecting";
+        const char *connectText = withAnimatedDots(connectBase);
+        const int connectMaxWidth = getTextWidth(connectBase) + 3 * 6;
+        oled.setCursorXY(10 + (128 - connectMaxWidth) / 2, 16);
+        oled.print(connectText);
+      }
     }
 
     oled.update();

@@ -64,6 +64,7 @@ enum Mode
 };
 
 Mode currentMode = IDLE;
+Mode lastMode = currentMode;
 /* ================== Common ================== */
 bool initialized = false;
 bool initializedIdle = false;
@@ -86,10 +87,17 @@ static bool ledState = false;
 GyverOLED<SSD1306_128x32, OLED_BUFFER> oled;
 
 uint32_t displayTimer;
+uint32_t brightnessTimer;
+uint32_t screenOffTimer;
+bool isScreenOff = false;
 
 #define OLED_UPDATE 100
 #define FONT_W 5
 #define FONT_H 8
+#define MIN_BRIGHTNESS 5
+#define MAX_BRIGHTNESS 255
+#define BRIGHTNESS_TIME 30000
+#define SCREENOFF_TIME 60000
 
 /* ================= Battery ================== */
 #define BATTERY_COEFFICIENT 0.97
@@ -356,6 +364,24 @@ float readBatteryVoltage()
   }
 
   return (float)BATTERY_COEFFICIENT * (total / (float)BATTERY_READ_ITERATIONS) * (float)BATTERY_RESISTANCE_COEFFICIENT * (float)V_REF / 4095.0;
+}
+
+void resetBrightness()
+{
+  brightnessTimer = millis();
+  oled.setContrast(MAX_BRIGHTNESS);
+}
+
+void resetScreenOff()
+{
+  isScreenOff = false;
+  screenOffTimer = millis();
+}
+
+void resetDisplayPowerSave()
+{
+  resetBrightness();
+  resetScreenOff();
 }
 
 uint8_t voltageToPercent(float voltage)
@@ -1016,6 +1042,24 @@ void handleSerialCommand()
 int getTextWidth(const char *text)
 {
   return strlen(text) * 6;
+}
+
+const char *withAnimatedDots(const char *text)
+{
+  static char out[24];
+  const uint8_t dots = (millis() / 1000) % 4;
+
+  size_t len = strlen(text);
+  if (len > sizeof(out) - 4)
+    len = sizeof(out) - 4;
+
+  memcpy(out, text, len);
+  for (uint8_t i = 0; i < dots; i++)
+  {
+    out[len + i] = '.';
+  }
+  out[len + dots] = '\0';
+  return out;
 }
 
 const static uint8_t radioConnectedIcon[7] PROGMEM = {
