@@ -1296,3 +1296,53 @@ void ShowJamming()
 
   sineOffset += 2;
 }
+
+// ======================= TEST ======================= //
+void initRadioScanner()
+{
+  radio_RF24.setAutoAck(false);
+  radio_RF24.disableCRC();
+  radio_RF24.setAddressWidth(2);
+  for (uint8_t i = 0; i < 6; ++i)
+    radio_RF24.openReadingPipe(i, noiseAddress[i]);
+  radio_RF24.setDataRate(RF24_1MBPS);
+  radio_RF24.startListening();
+  radio_RF24.stopListening();
+  radio_RF24.flush_rx();
+}
+
+bool scanChannels(uint8_t channel)
+{
+  radio_RF24.setChannel(channel);
+  radio_RF24.startListening();
+  delayMicroseconds(130);
+  bool found = radio_RF24.testRPD();
+  radio_RF24.stopListening();
+  if (found || radio_RF24.testRPD() || radio_RF24.available())
+  {
+    radio_RF24.flush_rx();
+    return true;
+  }
+  return false;
+}
+
+void DrawSpectrum_UHF_Portable()
+{
+  const uint8_t chartBottom = 31;
+  const uint8_t chartHeight = 22;
+
+  for (uint8_t ch = 0; ch < NUM_CHANNELS; ch++)
+  {
+    uint8_t strength = channelStrength[ch];
+    if (strength > 0)
+    {
+      uint8_t barH = (chartHeight * strength) / (cacheMax * 2);
+      if (barH == 0)
+        barH = 1;
+      oled.line(ch + 1, chartBottom, ch + 1, chartBottom - barH, 1);
+    }
+  }
+
+  oled.setCursorXY(0, 0);
+  oled.print("UHF SPC");
+}

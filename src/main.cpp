@@ -926,6 +926,55 @@ void loop1()
 
       break;
     }
+    case UHF_SPECTRUM:
+    {
+      static uint8_t channel = 0;
+      static uint32_t lastSwitchTime = 0;
+      static bool isSending = true;
+
+      if (!initialized)
+      {
+        initRadioScanner();
+        currentLedMode = LED_BLINK_FAST;
+        isSending = true;
+        initialized = true;
+      }
+
+      if (isSending)
+      {
+        if (millis() - lastSwitchTime < 5 * SEND_DURATION_MS)
+        {
+          bool found = scanChannels(channel);
+          channelStrength[channel] = stored[channel].push(found);
+          channel = (channel + 1) % NUM_CHANNELS;
+        }
+        else
+        {
+          communication.setSlaveMode();
+          communication.init();
+          isSending = false;
+          lastSwitchTime = millis();
+        }
+      }
+      else
+      {
+        if (communication.receivePacket(recievedData, &recievedDataLen) && recievedData[0] == PROTOCOL_HEADER)
+        {
+          checkConnectionTimer = millis();
+          currentMode = getModeFromPacket(recievedData, recievedDataLen);
+          initialized = false;
+          return;
+        }
+
+        if (millis() - lastSwitchTime >= LISTEN_DURATION_MS)
+        {
+          initRadioScanner();
+          isSending = true;
+          lastSwitchTime = millis();
+        }
+      }
+      break;
+    }
 
     case FM_RADIO:
     {
@@ -1303,6 +1352,10 @@ void loop()
       {
         oled.circle(122, 4, 1, 1);
       }
+    }
+    else if (currentMode == UHF_SPECTRUM)
+    {
+      DrawSpectrum_UHF_Portable();
     }
     else
     {
