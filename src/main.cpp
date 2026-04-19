@@ -39,8 +39,6 @@ void setup()
   SPI1.setRX(RX_PIN_NRF);
   SPI1.begin();
 
-  radio_RF24.begin(&SPI1);
-
   analogReadResolution(12);
 
   oled.init();
@@ -54,6 +52,18 @@ void setup()
   resetDisplayPowerSave();
 
   delay(1000);
+
+  while (!radio_RF24.begin(&SPI1))
+  {
+    oled.clear();
+    const char *errorBase = "Radio init failed";
+    const char *errorText = withAnimatedDots(errorBase);
+    const int errorMaxWidth = getTextWidth(errorBase) + 5 * 6;
+    oled.setCursorXY(10 + (128 - errorMaxWidth) / 2, 15);
+    oled.print(errorText);
+    oled.update();
+    delay(1000);
+  }
 
   communication.setSlaveMode();
   communication.init();
@@ -1411,8 +1421,13 @@ void loop()
         const char *connectBase = "Connecting";
         const char *connectText = withAnimatedDots(connectBase);
         const int connectMaxWidth = getTextWidth(connectBase) + 3 * 6;
-        oled.setCursorXY(10 + (128 - connectMaxWidth) / 2, 16);
+        oled.setCursorXY(10 + (128 - connectMaxWidth) / 2, 10);
         oled.print(connectText);
+
+        char ChannelText[20];
+        snprintf(ChannelText, sizeof(ChannelText), "Channel: %u", RADIO_CHANNEL);
+        oled.setCursorXY(10 + (128 - getTextWidth(ChannelText)) / 2, 20);
+        oled.print(ChannelText);
       }
     }
 
