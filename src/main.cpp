@@ -32,8 +32,6 @@ void setup()
   SPI.setRX(RX_PIN_CC);
   SPI.begin();
 
-  cc1101Init();
-
   SPI1.setSCK(SCK_PIN_NRF);
   SPI1.setTX(TX_PIN_NRF);
   SPI1.setRX(RX_PIN_NRF);
@@ -52,6 +50,20 @@ void setup()
   resetDisplayPowerSave();
 
   delay(1000);
+
+  cc1101setup();
+
+  while (!cc1101begin())
+  {
+    oled.clear();
+    const char *errorBase = "CC1101 init failed";
+    const char *errorText = withAnimatedDots(errorBase);
+    const int errorMaxWidth = getTextWidth(errorBase) + 5 * 6;
+    oled.setCursorXY(10 + (128 - errorMaxWidth) / 2, 15);
+    oled.print(errorText);
+    oled.update();
+    delay(1000);
+  }
 
   while (!radio_RF24.begin(&SPI1))
   {
@@ -1305,7 +1317,7 @@ void loop()
       oled.setCursorXY(batX, 0);
       oled.print(BatText);
 
-      int right = batX - 2;
+      int right = batX - 5;
       if (successfullyConnected)
       {
         int iconX = batX - 5 - 7;

@@ -637,7 +637,7 @@ uint16_t getFMFrequencyFromPacket(const uint8_t *payload, uint8_t payloadLen)
   return freq;
 }
 
-void cc1101Init()
+void cc1101setup()
 {
   ELECHOUSE_cc1101.setSpiPin(2, 4, 3, CSN_PIN_CC);
 
@@ -645,6 +645,12 @@ void cc1101Init()
   ELECHOUSE_cc1101.setClb(2, 9, 12);
   ELECHOUSE_cc1101.setClb(3, 18, 21);
   ELECHOUSE_cc1101.setClb(4, 21, 22);
+}
+
+bool cc1101begin()
+{
+  if (!ELECHOUSE_cc1101.getCC1101())
+    return false;
 
   ELECHOUSE_cc1101.Init();
   ELECHOUSE_cc1101.setGDO0(GD0_PIN_CC);
@@ -655,6 +661,7 @@ void cc1101Init()
   ELECHOUSE_cc1101.setCCMode(0);
   ELECHOUSE_cc1101.setSyncMode(0);
   ELECHOUSE_cc1101.setCrc(0);
+  return true;
 }
 
 //================================== TESLA ======================================*/
