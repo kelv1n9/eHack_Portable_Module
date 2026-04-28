@@ -126,7 +126,7 @@ void loop1()
       if (!initialized)
       {
         pinMode(GD0_PIN_CC, INPUT);
-        ELECHOUSE_cc1101.SetRx(raFrequencies[currentScanFreq]);
+        cc1101.SetRx(raFrequencies[currentScanFreq]);
         radio_RF24.stopListening();
         currentLedMode = LED_BLINK_FAST;
         waitingForSettle = true;
@@ -142,7 +142,7 @@ void loop1()
           {
             if (millis() - lastStepMs >= RSSI_STEP_MS)
             {
-              currentRssi = ELECHOUSE_cc1101.getRssi();
+              currentRssi = cc1101.getRssi();
 
               int data[2];
               data[0] = currentRssi;
@@ -153,7 +153,7 @@ void loop1()
               bool success = radio_RF24.write(&data, sizeof(data));
 
               currentScanFreq = (currentScanFreq + 1) % raFreqCount;
-              ELECHOUSE_cc1101.SetRx(raFrequencies[currentScanFreq]);
+              cc1101.SetRx(raFrequencies[currentScanFreq]);
               lastStepMs = millis();
               waitingForSettle = true;
 
@@ -215,7 +215,7 @@ void loop1()
       {
         pinMode(GD0_PIN_CC, INPUT);
         mySwitch.enableReceive(GD0_PIN_CC);
-        ELECHOUSE_cc1101.SetRx(radioFrequency);
+        cc1101.SetRx(radioFrequency);
         radio_RF24.stopListening();
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
@@ -227,7 +227,7 @@ void loop1()
         {
           if (millis() - lastStepMs >= RSSI_STEP_MS)
           {
-            currentRssi = ELECHOUSE_cc1101.getRssi();
+            currentRssi = cc1101.getRssi();
             DBG("RSSI: %d, FREQ: %.2f\n", currentRssi, radioFrequency);
             bool success = radio_RF24.write(&currentRssi, sizeof(currentRssi));
             lastStepMs = millis();
@@ -285,7 +285,7 @@ void loop1()
           mySwitch.disableReceive();
           mySwitch.enableTransmit(GD0_PIN_CC);
           pinMode(GD0_PIN_CC, OUTPUT);
-          ELECHOUSE_cc1101.SetTx(radioFrequency);
+          cc1101.SetTx(radioFrequency);
 
           mySwitch.setProtocol(mySwitch.getReceivedProtocol());
           mySwitch.setRepeatTransmit(10);
@@ -316,7 +316,7 @@ void loop1()
       {
         pinMode(GD0_PIN_CC, INPUT);
         mySwitch.enableReceive(GD0_PIN_CC);
-        ELECHOUSE_cc1101.SetRx(radioFrequency);
+        cc1101.SetRx(radioFrequency);
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
       }
@@ -326,7 +326,7 @@ void loop1()
         mySwitch.disableReceive();
         mySwitch.enableTransmit(GD0_PIN_CC);
         pinMode(GD0_PIN_CC, OUTPUT);
-        ELECHOUSE_cc1101.SetTx(radioFrequency);
+        cc1101.SetTx(radioFrequency);
 
         mySwitch.setProtocol(manualProtocol);
         mySwitch.setRepeatTransmit(10);
@@ -353,7 +353,7 @@ void loop1()
         mySwitch.disableReceive();
         mySwitch.enableTransmit(GD0_PIN_CC);
         pinMode(GD0_PIN_CC, OUTPUT);
-        ELECHOUSE_cc1101.SetTx(radioFrequency);
+        cc1101.SetTx(radioFrequency);
 
         mySwitch.setProtocol(mySwitch.getReceivedProtocol());
         mySwitch.setRepeatTransmit(10);
@@ -380,7 +380,7 @@ void loop1()
       if (!initialized)
       {
         pinMode(GD0_PIN_CC, INPUT);
-        ELECHOUSE_cc1101.SetRx(radioFrequency);
+        cc1101.SetRx(radioFrequency);
         attachInterrupt(digitalPinToInterrupt(GD0_PIN_CC), captureBarrierCode, CHANGE);
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
@@ -391,7 +391,7 @@ void loop1()
         // Repeating the signal
         detachInterrupt(GD0_PIN_CC);
         pinMode(GD0_PIN_CC, OUTPUT);
-        ELECHOUSE_cc1101.SetTx(radioFrequency);
+        cc1101.SetTx(radioFrequency);
 
         if (barrierProtocol == 0)
         {
@@ -422,7 +422,7 @@ void loop1()
       if (!initialized)
       {
         pinMode(GD0_PIN_CC, INPUT);
-        ELECHOUSE_cc1101.SetRx(radioFrequency);
+        cc1101.SetRx(radioFrequency);
         attachInterrupt(digitalPinToInterrupt(GD0_PIN_CC), captureBarrierCode, CHANGE);
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
@@ -435,7 +435,7 @@ void loop1()
         // Repeating the signal
         detachInterrupt(GD0_PIN_CC);
         pinMode(GD0_PIN_CC, OUTPUT);
-        ELECHOUSE_cc1101.SetTx(radioFrequency);
+        cc1101.SetTx(radioFrequency);
 
         attackIsActive = true;
       }
@@ -470,7 +470,7 @@ void loop1()
       if (!initialized)
       {
         pinMode(GD0_PIN_CC, OUTPUT);
-        ELECHOUSE_cc1101.SetTx(radioFrequency);
+        cc1101.SetTx(radioFrequency);
         currentLedMode = LED_BLINK_FAST;
         barrierBruteIndex = 4095;
         initialized = true;
@@ -502,7 +502,7 @@ void loop1()
       if (!initialized)
       {
         pinMode(GD0_PIN_CC, OUTPUT);
-        ELECHOUSE_cc1101.SetTx(radioFrequency);
+        cc1101.SetTx(radioFrequency);
         currentLedMode = LED_BLINK_FAST;
         barrierBruteIndex = 4095;
         initialized = true;
@@ -532,7 +532,7 @@ void loop1()
       if (!initialized)
       {
         pinMode(GD0_PIN_CC, OUTPUT);
-        ELECHOUSE_cc1101.SetTx(radioFrequency);
+        cc1101.SetTx(radioFrequency);
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
       }
@@ -555,14 +555,14 @@ void loop1()
       if (!initialized)
       {
         pinMode(GD0_PIN_CC, OUTPUT);
-        ELECHOUSE_cc1101.SetTx(radioFrequency);
+        cc1101.SetTx(radioFrequency);
         currentLedMode = LED_BLINK_FAST;
         initialized = true;
       }
 
       static bool toggleFreq = false;
       float freq = toggleFreq ? 315.0 : 433.92;
-      ELECHOUSE_cc1101.SetTx(freq);
+      cc1101.SetTx(freq);
       toggleFreq = !toggleFreq;
 
       DBG("Tesla Freq: %.2f\n", freq);
@@ -1012,7 +1012,7 @@ void loop1()
     {
       pinMode(GD0_PIN_CC, INPUT);
       mySwitch.enableReceive(GD0_PIN_CC);
-      ELECHOUSE_cc1101.SetRx(radioFrequency);
+      cc1101.SetRx(radioFrequency);
       currentLedMode = LED_BLINK_FAST;
       initialized = true;
     }
@@ -1023,7 +1023,7 @@ void loop1()
       mySwitch.disableReceive();
       mySwitch.enableTransmit(GD0_PIN_CC);
       pinMode(GD0_PIN_CC, OUTPUT);
-      ELECHOUSE_cc1101.SetTx(radioFrequency);
+      cc1101.SetTx(radioFrequency);
       mySwitch.setRepeatTransmit(10);
       delay(1000);
 
@@ -1067,7 +1067,7 @@ void loop1()
         mySwitch.disableReceive();
         mySwitch.enableTransmit(GD0_PIN_CC);
         pinMode(GD0_PIN_CC, OUTPUT);
-        ELECHOUSE_cc1101.SetTx(radioFrequency);
+        cc1101.SetTx(radioFrequency);
 
         mySwitch.setProtocol(newProtocol);
         mySwitch.setRepeatTransmit(10);
@@ -1267,7 +1267,7 @@ void loop()
             {
             case HF_SCAN:
             case HF_BARRIER_SCAN:
-              ELECHOUSE_cc1101.SetRx(radioFrequency);
+              cc1101.SetRx(radioFrequency);
               DBG("Setted RX Freq\n");
               break;
             case HF_REPLAY:
@@ -1275,7 +1275,7 @@ void loop()
             case HF_BARRIER_REPLAY:
             case HF_BARRIER_BRUTE_NICE:
             case HF_BARRIER_BRUTE_CAME:
-              ELECHOUSE_cc1101.SetTx(radioFrequency);
+              cc1101.SetTx(radioFrequency);
               DBG("Setted TX Freq\n");
               break;
             }

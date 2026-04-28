@@ -17,7 +17,6 @@
 
 #include <Arduino.h>
 #include "RF24.h"
-#include <ELECHOUSE_CC1101_SRC_DRV.h>
 
 #ifndef MASTER_DEVICE
 #define MASTER_DEVICE 0
@@ -79,8 +78,8 @@ public:
   /**
   @brief Constructor for DataTransmission class.
   @param radioPtrNRF Pointer to RF24 radio object.
-  @param radioPtrCC Pointer to ELECHOUSE_CC1101 radio object.
-  @note This constructor initializes the DataTransmission object with pointers to the RF24 and ELECHOUSE_CC1101 radio objects.
+  @param radioPtrCC Pointer to cc1101 radio object.
+  @note This constructor initializes the DataTransmission object with pointers to the RF24 and cc1101 radio objects.
   */
   DataTransmission(RF24 *radioPtrNRF);
 

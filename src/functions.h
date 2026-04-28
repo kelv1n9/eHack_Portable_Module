@@ -18,7 +18,7 @@
 #include <SPI.h>
 #include <EEPROM.h>
 
-#include <ELECHOUSE_CC1101_SRC_DRV.h>
+#include <CC1101.h>
 #include <Adafruit_Si4713.h>
 #include <DataTransmission.h>
 #include <RCSwitch.h>
@@ -639,28 +639,28 @@ uint16_t getFMFrequencyFromPacket(const uint8_t *payload, uint8_t payloadLen)
 
 void cc1101setup()
 {
-  ELECHOUSE_cc1101.setSpiPin(2, 4, 3, CSN_PIN_CC);
+  cc1101.setSpiPin(2, 4, 3, CSN_PIN_CC);
 
-  ELECHOUSE_cc1101.setClb(1, 8, 8);
-  ELECHOUSE_cc1101.setClb(2, 9, 12);
-  ELECHOUSE_cc1101.setClb(3, 18, 21);
-  ELECHOUSE_cc1101.setClb(4, 21, 22);
+  cc1101.setClb(1, 8, 8);
+  cc1101.setClb(2, 9, 12);
+  cc1101.setClb(3, 18, 21);
+  cc1101.setClb(4, 21, 22);
 }
 
 bool cc1101begin()
 {
-  if (!ELECHOUSE_cc1101.getCC1101())
+  if (!cc1101.getCC1101())
     return false;
 
-  ELECHOUSE_cc1101.Init();
-  ELECHOUSE_cc1101.setGDO0(GD0_PIN_CC);
-  ELECHOUSE_cc1101.setDcFilterOff(0);
-  ELECHOUSE_cc1101.setRxBW(135);
-  ELECHOUSE_cc1101.setPA(12);
-  ELECHOUSE_cc1101.setModulation(2);
-  ELECHOUSE_cc1101.setCCMode(0);
-  ELECHOUSE_cc1101.setSyncMode(0);
-  ELECHOUSE_cc1101.setCrc(0);
+  cc1101.Init();
+  cc1101.setGDO0(GD0_PIN_CC);
+  cc1101.setDcFilterOff(0);
+  cc1101.setRxBW(135);
+  cc1101.setPA(12);
+  cc1101.setModulation(2);
+  cc1101.setCCMode(0);
+  cc1101.setSyncMode(0);
+  cc1101.setCrc(0);
   return true;
 }
 
